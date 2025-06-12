@@ -1,7 +1,7 @@
 # Runelite Entity Render Distance plugin
-Renders a box around the player on the limits of the entity render distance.
+Draws a border around the player to mark the maximum entity render distance
 
-The box can also be rendered on the minimap, and the border colour can be changed. It is also possible to make them only appear when in, or near, the wilderness.
+The border can also be rendered on the minimap, and the border colour can be changed. It is also possible to make them only appear when in, or near, the wilderness.
 
 Nearly 100% organic Copilot slop.
 
