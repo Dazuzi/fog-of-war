@@ -1,13 +1,13 @@
-package com.example;
+package com.entityrenderdistance;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class ExamplePluginTest
+public class EntityRenderDistance
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(ExamplePlugin.class);
+		ExternalPluginManager.loadBuiltin(EntityRenderDistancePlugin.class);
 		RuneLite.main(args);
 	}
 }
