@@ -134,13 +134,21 @@ public interface EntityRenderDistanceConfig extends Config {
 			position = 4
 	)
 	default boolean extrapolateMovement() { return true; }
+	@ConfigItem(
+			keyName = "onlyFadeAtRenderLimit",
+			name = "Only fade at render limit",
+			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
+			section = fadingPlayerSection,
+			position = 5
+	)
+	default boolean onlyFadeAtRenderLimit() { return false; }
 	@Range(min = 1, max = 10)
 	@ConfigItem(
 			keyName = "fadeDuration",
 			name = "Fade duration (ticks)",
 			description = "How many game ticks it takes for a marker to completely fade.",
 			section = fadingPlayerSection,
-			position = 5
+			position = 6
 	)
 	default int fadeDuration() { return 2; }
 	@Alpha
@@ -149,7 +157,7 @@ public interface EntityRenderDistanceConfig extends Config {
 			name = "Fade marker colour",
 			description = "The colour of the fading tile marker.",
 			section = fadingPlayerSection,
-			position = 6
+			position = 7
 	)
 	default Color fadeColor() { return new Color(255, 0, 0, 150); }
 }

@@ -90,10 +90,13 @@ public class FadingPlayerManager {
 		});
 	}
 	private boolean isOnRenderDistanceBoundary(WorldPoint playerLocation, WorldPoint referenceLocation) {
+		int renderRadius = config.renderDistanceRadius();
+		if (playerLocation == null || referenceLocation == null) {
+			return false;
+		}
 		int dx = Math.abs(playerLocation.getX() - referenceLocation.getX());
 		int dy = Math.abs(playerLocation.getY() - referenceLocation.getY());
-		int renderRadius = config.renderDistanceRadius();
-		return dx == renderRadius || dy == renderRadius;
+		return dx >= (renderRadius - 1) || dy >= (renderRadius - 1);
 	}
 	private void updatePlayerTracking() {
 		Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
@@ -109,40 +112,42 @@ public class FadingPlayerManager {
 		Set<Player> disappearedPlayers = new HashSet<>(lastTickPlayerLocations.keySet());
 		disappearedPlayers.removeAll(currentPlayerLocations.keySet());
 		WorldPoint currentLocalPlayerLocation = client.getLocalPlayer().getWorldLocation();
-		boolean localPlayerMoved = lastTickLocalPlayerLocation != null &&
-				!lastTickLocalPlayerLocation.equals(currentLocalPlayerLocation);
 		for (Player player : disappearedPlayers) {
 			if (fadingPlayers.containsKey(player)) continue;
 			WorldPoint lastLocation = lastTickPlayerLocations.get(player);
 			if (lastLocation == null) continue;
+			WorldPoint referencePlayerLocation = lastTickLocalPlayerLocation != null ? lastTickLocalPlayerLocation : currentLocalPlayerLocation;
+			boolean atBoundary = isOnRenderDistanceBoundary(lastLocation, referencePlayerLocation);
+			if (config.onlyFadeAtRenderLimit() && !atBoundary) {
+				continue;
+			}
 			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayerLocations.get(player);
 			WorldPoint velocity = (twoTicksAgoLocation != null)
 					? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
 					: new WorldPoint(0, 0, 0);
-			WorldPoint initialFadeLocation;
-			if (!localPlayerMoved) {
-				WorldPoint referencePlayerLocation = lastTickLocalPlayerLocation != null ? lastTickLocalPlayerLocation : currentLocalPlayerLocation;
-				if (isOnRenderDistanceBoundary(lastLocation, referencePlayerLocation)) {
-					int dx = lastLocation.getX() - referencePlayerLocation.getX();
-					int dy = lastLocation.getY() - referencePlayerLocation.getY();
-					int absDx = Math.abs(dx);
-					int absDy = Math.abs(dy);
-					int pushX = 0;
-					int pushY = 0;
-					if (absDx > absDy) {
-						pushX = Integer.signum(dx);
-					} else if (absDy > absDx) {
-						pushY = Integer.signum(dy);
-					} else {
-						pushX = Integer.signum(dx);
-						pushY = Integer.signum(dy);
-					}
-					initialFadeLocation = new WorldPoint(lastLocation.getX() + pushX, lastLocation.getY() + pushY, lastLocation.getPlane());
-				} else {
-					initialFadeLocation = lastLocation;
+			WorldPoint initialFadeLocation = lastLocation;
+			boolean localPlayerMoved = lastTickLocalPlayerLocation != null && !lastTickLocalPlayerLocation.equals(currentLocalPlayerLocation);
+			if (atBoundary && !localPlayerMoved) {
+				int dx = lastLocation.getX() - referencePlayerLocation.getX();
+				int dy = lastLocation.getY() - referencePlayerLocation.getY();
+				int absDx = Math.abs(dx);
+				int absDy = Math.abs(dy);
+				int pushDistance = 1;
+				int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
+				if (velocityMagnitude >= 2) {
+					pushDistance = 2;
 				}
-			} else {
-				initialFadeLocation = lastLocation;
+				int pushX = 0;
+				int pushY = 0;
+				if (absDx > absDy) {
+					pushX = Integer.signum(dx) * pushDistance;
+				} else if (absDy > absDx) {
+					pushY = Integer.signum(dy) * pushDistance;
+				} else {
+					pushX = Integer.signum(dx) * pushDistance;
+					pushY = Integer.signum(dy) * pushDistance;
+				}
+				initialFadeLocation = new WorldPoint(lastLocation.getX() + pushX, lastLocation.getY() + pushY, lastLocation.getPlane());
 			}
 			FadingPlayer fp = new FadingPlayer(player, velocity);
 			fp.setLastLocation(initialFadeLocation);
