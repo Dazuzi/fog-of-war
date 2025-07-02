@@ -19,7 +19,7 @@ public interface EntityRenderDistanceConfig extends Config {
 	@ConfigItem(
 			keyName = "renderDistanceRadius",
 			name = "Render distance",
-			description = "The radius of the render distance box (1-64).",
+			description = "This does NOT change the game's render distance.<br>It adjusts the overlay's radius to match the current in-game entity render distance (normally 15).<br>Adjust this only if Jagex changes the render distance in a future game update.",
 			position = 1
 	)
 	default int renderDistanceRadius() { return 15; }
@@ -96,18 +96,42 @@ public interface EntityRenderDistanceConfig extends Config {
 	String fadingPlayerSection = "fadingPlayerSection";
 	@ConfigItem(
 			keyName = "enableFadingPlayers",
-			name = "Enable fading players",
+			name = "Enable fading player tiles",
 			description = "Mark players that leave render distance with a fading marker.",
 			section = fadingPlayerSection,
 			position = 0
 	)
 	default boolean enableFadingPlayers() { return true; }
 	@ConfigItem(
+			keyName = "onlyFadeAtRenderLimit",
+			name = "Only fade at the limit",
+			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
+			section = fadingPlayerSection,
+			position = 1
+	)
+	default boolean onlyFadeAtRenderLimit() { return true; }
+	@ConfigItem(
+			keyName = "extrapolateMovement",
+			name = "Extrapolate movement",
+			description = "Fading player markers will continue to move based on their last known velocity.",
+			section = fadingPlayerSection,
+			position = 2
+	)
+	default boolean extrapolateMovement() { return true; }
+	@ConfigItem(
+			keyName = "showFadeNames",
+			name = "Label tiles after players",
+			description = "Show the player's name on the fading marker in the world view.",
+			section = fadingPlayerSection,
+			position = 3
+	)
+	default boolean showFadeNames() { return true; }
+	@ConfigItem(
 			keyName = "showFadingInWorld",
 			name = "Show in world",
 			description = "Show fading player markers in the main game view.",
 			section = fadingPlayerSection,
-			position = 1
+			position = 4
 	)
 	default boolean showFadingInWorld() { return true; }
 	@ConfigItem(
@@ -115,33 +139,9 @@ public interface EntityRenderDistanceConfig extends Config {
 			name = "Show on minimap",
 			description = "Show fading player markers on the minimap.",
 			section = fadingPlayerSection,
-			position = 2
-	)
-	default boolean showFadingOnMinimap() { return true; }
-	@ConfigItem(
-			keyName = "showFadeNames",
-			name = "Show names",
-			description = "Show the player's name on the fading marker in the world view.",
-			section = fadingPlayerSection,
-			position = 3
-	)
-	default boolean showFadeNames() { return true; }
-	@ConfigItem(
-			keyName = "extrapolateMovement",
-			name = "Extrapolate movement",
-			description = "Fading player markers will continue to move based on their last known velocity.",
-			section = fadingPlayerSection,
-			position = 4
-	)
-	default boolean extrapolateMovement() { return true; }
-	@ConfigItem(
-			keyName = "onlyFadeAtRenderLimit",
-			name = "Only fade at render limit",
-			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
-			section = fadingPlayerSection,
 			position = 5
 	)
-	default boolean onlyFadeAtRenderLimit() { return false; }
+	default boolean showFadingOnMinimap() { return true; }
 	@Range(min = 1, max = 10)
 	@ConfigItem(
 			keyName = "fadeDuration",
