@@ -101,7 +101,7 @@ public interface EntityRenderDistanceConfig extends Config {
 			section = fadingPlayerSection,
 			position = 0
 	)
-	default boolean enableFadingPlayers() { return true; }
+	default boolean enableFadingPlayers() { return false; }
 	@ConfigItem(
 			keyName = "onlyFadeAtRenderLimit",
 			name = "Only fade at the limit",
