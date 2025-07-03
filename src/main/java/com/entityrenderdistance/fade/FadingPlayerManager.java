@@ -75,7 +75,11 @@ public class FadingPlayerManager {
 		fadingPlayers.entrySet().removeIf(entry -> {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
-			if (fp.getTicksSinceDisappeared() >= config.fadeDuration()) {
+			if (fp.getTicksSinceDisappeared() > config.fadeDuration()) {
+				return true;
+			}
+			WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
+			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= config.renderDistanceRadius()) {
 				return true;
 			}
 			if (config.extrapolateMovement()) {
@@ -88,15 +92,6 @@ public class FadingPlayerManager {
 			}
 			return false;
 		});
-	}
-	private boolean isOnRenderDistanceBoundary(WorldPoint playerLocation, WorldPoint referenceLocation) {
-		int renderRadius = config.renderDistanceRadius();
-		if (playerLocation == null || referenceLocation == null) {
-			return false;
-		}
-		int dx = Math.abs(playerLocation.getX() - referenceLocation.getX());
-		int dy = Math.abs(playerLocation.getY() - referenceLocation.getY());
-		return dx >= (renderRadius - 1) || dy >= (renderRadius - 1);
 	}
 	private void updatePlayerTracking() {
 		Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
@@ -112,42 +107,57 @@ public class FadingPlayerManager {
 		Set<Player> disappearedPlayers = new HashSet<>(lastTickPlayerLocations.keySet());
 		disappearedPlayers.removeAll(currentPlayerLocations.keySet());
 		WorldPoint currentLocalPlayerLocation = client.getLocalPlayer().getWorldLocation();
+		WorldPoint localPlayerVelocity = (lastTickLocalPlayerLocation != null)
+				? new WorldPoint(currentLocalPlayerLocation.getX() - lastTickLocalPlayerLocation.getX(), currentLocalPlayerLocation.getY() - lastTickLocalPlayerLocation.getY(), 0)
+				: new WorldPoint(0, 0, 0);
 		for (Player player : disappearedPlayers) {
 			if (fadingPlayers.containsKey(player)) continue;
 			WorldPoint lastLocation = lastTickPlayerLocations.get(player);
 			if (lastLocation == null) continue;
-			WorldPoint referencePlayerLocation = lastTickLocalPlayerLocation != null ? lastTickLocalPlayerLocation : currentLocalPlayerLocation;
-			boolean atBoundary = isOnRenderDistanceBoundary(lastLocation, referencePlayerLocation);
-			if (config.onlyFadeAtRenderLimit() && !atBoundary) {
-				continue;
-			}
 			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayerLocations.get(player);
 			WorldPoint velocity = (twoTicksAgoLocation != null)
 					? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
 					: new WorldPoint(0, 0, 0);
-			WorldPoint initialFadeLocation = lastLocation;
-			boolean localPlayerMoved = lastTickLocalPlayerLocation != null && !lastTickLocalPlayerLocation.equals(currentLocalPlayerLocation);
-			if (atBoundary && !localPlayerMoved) {
-				int dx = lastLocation.getX() - referencePlayerLocation.getX();
-				int dy = lastLocation.getY() - referencePlayerLocation.getY();
-				int absDx = Math.abs(dx);
-				int absDy = Math.abs(dy);
-				int pushDistance = 1;
-				int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
-				if (velocityMagnitude >= 2) {
-					pushDistance = 2;
-				}
-				int pushX = 0;
-				int pushY = 0;
-				if (absDx > absDy) {
-					pushX = Integer.signum(dx) * pushDistance;
-				} else if (absDy > absDx) {
-					pushY = Integer.signum(dy) * pushDistance;
+			WorldPoint initialFadeLocation;
+			int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
+			boolean wasOnRenderEdge = lastLocation.distanceTo(currentLocalPlayerLocation) >= config.renderDistanceRadius() - 1;
+			WorldPoint predictedNextLocation = new WorldPoint(lastLocation.getX() + velocity.getX(), lastLocation.getY() + velocity.getY(), lastLocation.getPlane());
+			boolean isPredictedInsideRender = predictedNextLocation.distanceTo(currentLocalPlayerLocation) <= config.renderDistanceRadius();
+			boolean isWallHuggingCase = isPredictedInsideRender && wasOnRenderEdge && velocityMagnitude > 0;
+			if (isWallHuggingCase) {
+				int dx = lastLocation.getX() - currentLocalPlayerLocation.getX();
+				int dy = lastLocation.getY() - currentLocalPlayerLocation.getY();
+				int pushX = (Math.abs(dx) >= config.renderDistanceRadius() - 1) ? Integer.signum(dx) : 0;
+				int pushY = (Math.abs(dy) >= config.renderDistanceRadius() - 1) ? Integer.signum(dy) : 0;
+				initialFadeLocation = new WorldPoint(predictedNextLocation.getX() + pushX, predictedNextLocation.getY() + pushY, predictedNextLocation.getPlane());
+			} else if (velocityMagnitude > 0) {
+				initialFadeLocation = predictedNextLocation;
+			} else {
+				int localVelocityMagnitude = Math.abs(localPlayerVelocity.getX()) + Math.abs(localPlayerVelocity.getY());
+				if (localVelocityMagnitude == 0) {
+					int dx = lastLocation.getX() - currentLocalPlayerLocation.getX();
+					int dy = lastLocation.getY() - currentLocalPlayerLocation.getY();
+					int absDx = Math.abs(dx);
+					int absDy = Math.abs(dy);
+					int pushX = 0;
+					int pushY = 0;
+					if (absDx > absDy) {
+						pushX = Integer.signum(dx);
+					} else if (absDy > absDx) {
+						pushY = Integer.signum(dy);
+					} else if (absDx > 0) {
+						pushX = Integer.signum(dx);
+						pushY = Integer.signum(dy);
+					}
+					initialFadeLocation = new WorldPoint(lastLocation.getX() + pushX, lastLocation.getY() + pushY, lastLocation.getPlane());
 				} else {
-					pushX = Integer.signum(dx) * pushDistance;
-					pushY = Integer.signum(dy) * pushDistance;
+					initialFadeLocation = lastLocation;
 				}
-				initialFadeLocation = new WorldPoint(lastLocation.getX() + pushX, lastLocation.getY() + pushY, lastLocation.getPlane());
+			}
+			if (config.onlyFadeAtRenderLimit()) {
+				if (initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= config.renderDistanceRadius()) {
+					continue;
+				}
 			}
 			FadingPlayer fp = new FadingPlayer(player, velocity);
 			fp.setLastLocation(initialFadeLocation);

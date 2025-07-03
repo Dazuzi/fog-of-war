@@ -46,6 +46,7 @@ public class FadingPlayerOverlay extends Overlay {
 		float fadeDuration = Math.max(1, config.fadeDuration());
 		float remainingTicks = fadeDuration - fadingPlayer.getTicksSinceDisappeared();
 		float opacity = remainingTicks / fadeDuration;
+		if (opacity <= 0) return;
 		Color color = new Color(
 				config.fadeColor().getRed() / 255f,
 				config.fadeColor().getGreen() / 255f,
