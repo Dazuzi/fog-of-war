@@ -1,10 +1,7 @@
 package com.entityrenderdistance;
-import net.runelite.client.config.Alpha;
-import net.runelite.client.config.Config;
-import net.runelite.client.config.ConfigGroup;
-import net.runelite.client.config.ConfigItem;
-import net.runelite.client.config.ConfigSection;
-import net.runelite.client.config.Range;
+
+import net.runelite.client.config.*;
+
 import java.awt.*;
 @ConfigGroup("entityrenderdistance")
 public interface EntityRenderDistanceConfig extends Config {
@@ -24,74 +21,107 @@ public interface EntityRenderDistanceConfig extends Config {
 	)
 	default int renderDistanceRadius() { return 15; }
 	@ConfigSection(
-			name = "World Box",
-			description = "Settings for the world overlay box",
+			name = "World",
+			description = "Settings for the world overlay",
 			position = 2
 	)
-	String worldBoxSection = "worldBoxSection";
+	String worldSection = "worldSection";
 	@ConfigItem(
-			keyName = "enableWorldBox",
-			name = "Enable world box",
-			description = "Enable the main world overlay box",
-			section = worldBoxSection,
+			keyName = "showWorldFog",
+			name = "Fog of war",
+			description = "Hides the area outside the render distance with a fog effect.",
+			section = worldSection,
 			position = 0
 	)
-	default boolean enableWorldBox() { return true; }
+	default boolean showWorldFog() { return true; }
+	@Alpha
+	@ConfigItem(
+			keyName = "worldFogColour",
+			name = "Fog colour",
+			description = "The colour of the world's fog of war effect.",
+			section = worldSection,
+			position = 1
+	)
+	default Color worldFogColour() { return new Color(0, 0, 0, 75); }
+	@ConfigItem(
+			keyName = "showWorldBorder",
+			name = "Show border",
+			description = "Shows the render distance border in the world view.",
+			section = worldSection,
+			position = 2
+	)
+	default boolean showWorldBorder() { return false; }
 	@Alpha
 	@ConfigItem(
 			keyName = "worldBorderColour",
 			name = "Border colour",
-			description = "The border colour of the world overlay box.",
-			section = worldBoxSection,
-			position = 1
+			description = "The colour of the world render distance border.",
+			section = worldSection,
+			position = 3
 	)
-	default Color worldBorderColour() { return new Color(255, 173, 0, 150); }
-	@Range(min = 1, max = 5)
+	default Color worldBorderColour() { return new Color(0, 0, 0, 100); }
+	@Range(min = 1, max = 16)
 	@ConfigItem(
 			keyName = "worldBorderThickness",
 			name = "Border thickness",
-			description = "The thickness of the world overlay box border.",
-			section = worldBoxSection,
-			position = 2
+			description = "The thickness of the world render distance border.",
+			section = worldSection,
+			position = 4
 	)
 	default int worldBorderThickness() { return 1; }
 	@ConfigSection(
-			name = "Minimap Box",
-			description = "Settings for the minimap box",
+			name = "Minimap",
+			description = "Settings for the minimap overlay",
 			position = 3
 	)
-	String minimapBoxSection = "minimapBoxSection";
+	String minimapSection = "minimapSection";
 	@ConfigItem(
-			keyName = "enableMinimapBox",
-			name = "Enable minimap box",
-			description = "Enable the minimap overlay box",
-			section = minimapBoxSection,
+			keyName = "showMinimapFog",
+			name = "Fog of war",
+			description = "Hides the area outside the render distance on the minimap with a fog effect.",
+			section = minimapSection,
 			position = 0
 	)
-	default boolean enableMinimapBox() { return true; }
+	default boolean showMinimapFog() { return true; }
+	@Alpha
+	@ConfigItem(
+			keyName = "minimapFogColour",
+			name = "Fog colour",
+			description = "The colour of the minimap's fog of war effect.",
+			section = minimapSection,
+			position = 1
+	)
+	default Color minimapFogColour() { return new Color(0, 0, 0, 75); }
+	@ConfigItem(
+			keyName = "showMinimapBorder",
+			name = "Show border",
+			description = "Shows the render distance border on the minimap.",
+			section = minimapSection,
+			position = 2
+	)
+	default boolean showMinimapBorder() { return false; }
 	@Alpha
 	@ConfigItem(
 			keyName = "minimapBorderColour",
 			name = "Border colour",
-			description = "The border colour of the minimap overlay.",
-			section = minimapBoxSection,
-			position = 1
+			description = "The colour of the minimap render distance border.",
+			section = minimapSection,
+			position = 3
 	)
-	default Color minimapBorderColour() { return new Color(255, 173, 0, 150); }
-	@Range(min = 1, max = 5)
+	default Color minimapBorderColour() { return new Color(0, 0, 0, 100); }
+	@Range(min = 1, max = 16)
 	@ConfigItem(
 			keyName = "minimapBorderThickness",
 			name = "Border thickness",
-			description = "The thickness of the minimap overlay border.",
-			section = minimapBoxSection,
-			position = 2
+			description = "The thickness of the minimap render distance border.",
+			section = minimapSection,
+			position = 4
 	)
 	default int minimapBorderThickness() { return 1; }
 	@ConfigSection(
 			name = "Fading Players",
 			description = "Settings for marking players that leave render distance",
-			position = 4,
-			closedByDefault = false
+			position = 4
 	)
 	String fadingPlayerSection = "fadingPlayerSection";
 	@ConfigItem(
@@ -105,7 +135,7 @@ public interface EntityRenderDistanceConfig extends Config {
 	@ConfigItem(
 			keyName = "onlyFadeAtRenderLimit",
 			name = "Only fade at the limit",
-			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
+			description = "Only create a fading marker if the player disappears at the edge of the render distance.<br>Note: this will not account for reduced render distance due to too many entities.",
 			section = fadingPlayerSection,
 			position = 1
 	)
@@ -142,7 +172,7 @@ public interface EntityRenderDistanceConfig extends Config {
 			position = 5
 	)
 	default boolean showFadingOnMinimap() { return true; }
-	@Range(min = 1, max = 10)
+	@Range(min = 1, max = 16)
 	@ConfigItem(
 			keyName = "fadeDuration",
 			name = "Fade duration (ticks)",

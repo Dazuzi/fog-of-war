@@ -1,11 +1,6 @@
 package com.entityrenderdistance.fade;
+
 import com.entityrenderdistance.EntityRenderDistanceConfig;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -16,19 +11,32 @@ import net.runelite.api.events.GameTick;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.ui.overlay.OverlayManager;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 @Singleton
 public class FadingPlayerManager {
 	@Inject
+	@SuppressWarnings("unused")
 	private Client client;
 	@Inject
+	@SuppressWarnings("unused")
 	private EntityRenderDistanceConfig config;
 	@Inject
+	@SuppressWarnings("unused")
 	private OverlayManager overlayManager;
 	@Inject
+	@SuppressWarnings("unused")
 	private EventBus eventBus;
 	@Inject
+	@SuppressWarnings("unused")
 	private FadingPlayerOverlay fadingPlayerOverlay;
 	@Inject
+	@SuppressWarnings("unused")
 	private FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
@@ -46,24 +54,24 @@ public class FadingPlayerManager {
 		eventBus.unregister(this);
 		clearAllTracking();
 	}
+	@SuppressWarnings("unused")
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event) {
-		if (event.getGameState() == GameState.LOADING) {
-			clearAllTracking();
-		}
+		if (event.getGameState() == GameState.LOADING) clearAllTracking();
 	}
+	@SuppressWarnings("unused")
 	@Subscribe
 	public void onGameTick(GameTick event) {
 		if (client.getGameState() != GameState.LOGGED_IN) {
 			clearAllTracking();
 			return;
 		}
-		if (!config.enableFadingPlayers()) {
+		if (config.enableFadingPlayers()) {
+			handleFadingPlayers();
+			updatePlayerTracking();
+		} else {
 			clearAllTracking();
-			return;
 		}
-		handleFadingPlayers();
-		updatePlayerTracking();
 	}
 	private void clearAllTracking() {
 		fadingPlayers.clear();
@@ -75,9 +83,7 @@ public class FadingPlayerManager {
 		fadingPlayers.entrySet().removeIf(entry -> {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
-			if (fp.getTicksSinceDisappeared() > config.fadeDuration()) {
-				return true;
-			}
+			if (fp.getTicksSinceDisappeared() > config.fadeDuration()) return true;
 			WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
 			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= config.renderDistanceRadius()) {
 				return true;
@@ -96,7 +102,7 @@ public class FadingPlayerManager {
 	private void updatePlayerTracking() {
 		Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
 		Set<String> currentPlayerNames = new HashSet<>();
-		for (Player player : client.getPlayers()) {
+		for (Player player : client.getTopLevelWorldView().players()) {
 			if (player != null && player != client.getLocalPlayer()) {
 				currentPlayerLocations.put(player, player.getWorldLocation());
 				if (player.getName() != null) {

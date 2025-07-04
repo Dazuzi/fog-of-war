@@ -1,26 +1,31 @@
 package com.entityrenderdistance;
+
 import com.entityrenderdistance.box.EntityRenderDistanceMinimapOverlay;
 import com.entityrenderdistance.box.EntityRenderDistanceWorldOverlay;
 import com.entityrenderdistance.fade.FadingPlayerManager;
 import com.google.inject.Provides;
-import javax.inject.Inject;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+
+import javax.inject.Inject;
 @PluginDescriptor(
 		name = "Entity Render Distance",
-		description = "Draws boxes around the player to mark the maximum entity render distance",
-		enabledByDefault = true
+		description = "Marks the entity render distance using a fog of war, a customisable border, and predictive fading player markers."
 )
 public class EntityRenderDistancePlugin extends Plugin {
 	@Inject
+	@SuppressWarnings("unused")
 	private OverlayManager overlayManager;
 	@Inject
+	@SuppressWarnings("unused")
 	private EntityRenderDistanceWorldOverlay worldOverlay;
 	@Inject
+	@SuppressWarnings("unused")
 	private EntityRenderDistanceMinimapOverlay minimapOverlay;
 	@Inject
+	@SuppressWarnings("unused")
 	private FadingPlayerManager fadingPlayerManager;
 	@Override
 	protected void startUp() {
@@ -34,6 +39,7 @@ public class EntityRenderDistancePlugin extends Plugin {
 		overlayManager.remove(minimapOverlay);
 		fadingPlayerManager.stop();
 	}
+	@SuppressWarnings("unused")
 	@Provides
 	EntityRenderDistanceConfig provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(EntityRenderDistanceConfig.class);

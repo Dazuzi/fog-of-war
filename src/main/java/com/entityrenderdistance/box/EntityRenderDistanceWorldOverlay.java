@@ -1,96 +1,142 @@
 package com.entityrenderdistance.box;
+
 import com.entityrenderdistance.EntityRenderDistanceConfig;
-import com.entityrenderdistance.EntityRenderDistancePlugin;
+import com.entityrenderdistance.util.ClientState;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
-import net.runelite.api.Varbits;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.geometry.Geometry;
 import net.runelite.client.ui.overlay.Overlay;
+import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
+
 import javax.inject.Inject;
 import java.awt.*;
+import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
+import java.util.ArrayList;
+import java.util.List;
+
 public class EntityRenderDistanceWorldOverlay extends Overlay {
     private final Client client;
     private final EntityRenderDistanceConfig config;
+    private final ClientState clientState;
+
     @Inject
-    public EntityRenderDistanceWorldOverlay(Client client, EntityRenderDistanceConfig config) {
+    public EntityRenderDistanceWorldOverlay(Client client, EntityRenderDistanceConfig config, ClientState clientState) {
         this.client = client;
         this.config = config;
+        this.clientState = clientState;
         setPosition(OverlayPosition.DYNAMIC);
+        setPriority(Overlay.PRIORITY_LOW);
+        setLayer(OverlayLayer.ABOVE_SCENE);
     }
+
     @Override
     public Dimension render(Graphics2D graphics) {
-        if (!config.enableWorldBox() || isClientNotReady()) return null;
-        if (config.onlyInWilderness() && !isInWilderness()) return null;
-        int radius = config.renderDistanceRadius();
-        WorldPoint centerWp = client.getLocalPlayer().getWorldLocation();
-        GeneralPath borderPath = createBorderPath(centerWp, radius);
-        if (borderPath != null) { renderPath(graphics, borderPath); }
+        if (clientState.isClientNotReady()) return null;
+        if (config.onlyInWilderness() && clientState.isNotInWilderness()) return null;
+
+        if (config.showWorldFog()) {
+            renderWorldFog(graphics);
+        }
+
+        if (config.showWorldBorder()) {
+            int radius = config.renderDistanceRadius();
+            WorldPoint centerWp = client.getLocalPlayer().getWorldLocation();
+            GeneralPath borderPath = createBorderPath(centerWp, radius);
+            if (borderPath != null) {
+                renderPath(graphics, borderPath);
+            }
+        }
+
         return null;
     }
+
+    private void renderWorldFog(Graphics2D graphics) {
+        Rectangle viewport = new Rectangle(
+                client.getViewportXOffset(),
+                client.getViewportYOffset(),
+                client.getViewportWidth(),
+                client.getViewportHeight()
+        );
+
+        int radius = config.renderDistanceRadius();
+        WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
+        GeneralPath renderAreaPath = createRenderAreaBoundary(playerLocation, radius);
+
+        if (renderAreaPath != null) {
+            Area screenArea = new Area(viewport);
+            Area renderArea = new Area(renderAreaPath);
+            screenArea.subtract(renderArea);
+            graphics.setColor(config.worldFogColour());
+            graphics.fill(screenArea);
+        } else {
+            graphics.setColor(config.worldFogColour());
+            graphics.fill(viewport);
+        }
+    }
+    private GeneralPath createRenderAreaBoundary(WorldPoint center, int radius) {
+        List<Point> boundaryPoints = new ArrayList<>();
+        int sampleRate = Math.max(1, radius / 16);
+        WorldView worldView = client.getTopLevelWorldView();
+        addBorderPoint(boundaryPoints, center.getX() - radius, center.getY() + radius, center.getPlane(), -64, 64, worldView);
+        for (int x = -radius + sampleRate; x < radius; x += sampleRate) { addBorderPoint(boundaryPoints, center.getX() + x, center.getY() + radius, center.getPlane(), 0, 64, worldView); }
+        addBorderPoint(boundaryPoints, center.getX() + radius, center.getY() + radius, center.getPlane(), 64, 64, worldView);
+        for (int y = radius - sampleRate; y > -radius; y -= sampleRate) { addBorderPoint(boundaryPoints, center.getX() + radius, center.getY() + y, center.getPlane(), 64, 0, worldView); }
+        addBorderPoint(boundaryPoints, center.getX() + radius, center.getY() - radius, center.getPlane(), 64, -64, worldView);
+        for (int x = radius - sampleRate; x > -radius; x -= sampleRate) { addBorderPoint(boundaryPoints, center.getX() + x, center.getY() - radius, center.getPlane(), 0, -64, worldView); }
+        addBorderPoint(boundaryPoints, center.getX() - radius, center.getY() - radius, center.getPlane(), -64, -64, worldView);
+        for (int y = -radius + sampleRate; y < radius; y += sampleRate) { addBorderPoint(boundaryPoints, center.getX() - radius, center.getY() + y, center.getPlane(), -64, 0, worldView); }
+        return createPathFromPoints(boundaryPoints);
+    }
+    private void addBorderPoint(List<Point> points, int worldX, int worldY, int plane, int offsetX, int offsetY, WorldView worldView) {
+        WorldPoint wp = new WorldPoint(worldX, worldY, plane);
+        LocalPoint lp = LocalPoint.fromWorld(worldView, wp);
+        if (lp != null) {
+            LocalPoint offsetPoint = lp.plus(offsetX, offsetY);
+            Point canvasPoint = Perspective.localToCanvas(client, offsetPoint, plane);
+            if (canvasPoint != null) points.add(canvasPoint);
+        }
+    }
     private GeneralPath createBorderPath(WorldPoint center, int radius) {
+        List<Point> borderPoints = new ArrayList<>();
+        int sampleRate = Math.max(1, radius / 16);
+        WorldView worldView = client.getTopLevelWorldView();
+        addBorderPoint(borderPoints, center.getX() - radius, center.getY() + radius, center.getPlane(), -64, 64, worldView);
+        for (int x = -radius + sampleRate; x < radius; x += sampleRate) { addBorderPoint(borderPoints, center.getX() + x, center.getY() + radius, center.getPlane(), 0, 64, worldView); }
+        addBorderPoint(borderPoints, center.getX() + radius, center.getY() + radius, center.getPlane(), 64, 64, worldView);
+        for (int y = radius - sampleRate; y > -radius; y -= sampleRate) { addBorderPoint(borderPoints, center.getX() + radius, center.getY() + y, center.getPlane(), 64, 0, worldView); }
+        addBorderPoint(borderPoints, center.getX() + radius, center.getY() - radius, center.getPlane(), 64, -64, worldView);
+        for (int x = radius - sampleRate; x > -radius; x -= sampleRate) { addBorderPoint(borderPoints, center.getX() + x, center.getY() - radius, center.getPlane(), 0, -64, worldView); }
+        addBorderPoint(borderPoints, center.getX() - radius, center.getY() - radius, center.getPlane(), -64, -64, worldView);
+        for (int y = -radius + sampleRate; y < radius; y += sampleRate) { addBorderPoint(borderPoints, center.getX() - radius, center.getY() + y, center.getPlane(), -64, 0, worldView); }
+        return createPathFromPoints(borderPoints);
+    }
+
+    private GeneralPath createPathFromPoints(List<Point> points) {
+        if (points.isEmpty()) return null;
         GeneralPath path = new GeneralPath();
         boolean pathStarted = false;
-        for (int x = -radius; x <= radius; x++) {
-            WorldPoint wp = new WorldPoint(center.getX() + x, center.getY() + radius, center.getPlane());
-            LocalPoint lp = LocalPoint.fromWorld(client, wp);
-            if (lp != null) {
-                int edgeY = lp.getY() + 64;
+        for (Point point : points) {
+            if (point != null) {
                 if (!pathStarted) {
-                    path.moveTo(lp.getX(), edgeY);
+                    path.moveTo(point.getX(), point.getY());
                     pathStarted = true;
                 } else {
-                    path.lineTo(lp.getX(), edgeY);
+                    path.lineTo(point.getX(), point.getY());
                 }
-            }
-        }
-        for (int y = radius - 1; y >= -radius; y--) {
-            WorldPoint wp = new WorldPoint(center.getX() + radius, center.getY() + y, center.getPlane());
-            LocalPoint lp = LocalPoint.fromWorld(client, wp);
-            if (lp != null) {
-                int edgeX = lp.getX() + 64;
-                path.lineTo(edgeX, lp.getY());
-            }
-        }
-        for (int x = radius - 1; x >= -radius; x--) {
-            WorldPoint wp = new WorldPoint(center.getX() + x, center.getY() - radius, center.getPlane());
-            LocalPoint lp = LocalPoint.fromWorld(client, wp);
-            if (lp != null) {
-                int edgeY = lp.getY() - 64;
-                path.lineTo(lp.getX(), edgeY);
-            }
-        }
-        for (int y = -radius + 1; y < radius; y++) {
-            WorldPoint wp = new WorldPoint(center.getX() - radius, center.getY() + y, center.getPlane());
-            LocalPoint lp = LocalPoint.fromWorld(client, wp);
-            if (lp != null) {
-                int edgeX = lp.getX() - 64;
-                path.lineTo(edgeX, lp.getY());
             }
         }
         if (pathStarted) path.closePath();
         return pathStarted ? path : null;
     }
+
     private void renderPath(Graphics2D graphics, GeneralPath path) {
         graphics.setColor(config.worldBorderColour());
         graphics.setStroke(new BasicStroke(config.worldBorderThickness()));
-        path = Geometry.filterPath(path, (p1, p2) ->
-                Perspective.localToCanvas(client, new LocalPoint((int)p1[0], (int)p1[1]), client.getPlane()) != null &&
-                        Perspective.localToCanvas(client, new LocalPoint((int)p2[0], (int)p2[1]), client.getPlane()) != null);
-        path = Geometry.transformPath(path, coords -> {
-            Point point = Perspective.localToCanvas(client, new LocalPoint((int)coords[0], (int)coords[1]), client.getPlane());
-            if (point != null) {
-                coords[0] = point.getX();
-                coords[1] = point.getY();
-            }
-        });
         graphics.draw(path);
     }
-    private boolean isInWilderness() { return client.getVarbitValue(Varbits.IN_WILDERNESS) == 1; }
-    private boolean isClientNotReady() { return client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null; }
 }
