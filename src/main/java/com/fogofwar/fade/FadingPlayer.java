@@ -1,4 +1,4 @@
-package com.entityrenderdistance.fade;
+package com.fogofwar.fade;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Player;

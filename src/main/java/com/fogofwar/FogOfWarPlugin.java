@@ -1,8 +1,9 @@
-package com.entityrenderdistance;
+package com.fogofwar;
 
-import com.entityrenderdistance.box.EntityRenderDistanceMinimapOverlay;
-import com.entityrenderdistance.box.EntityRenderDistanceWorldOverlay;
-import com.entityrenderdistance.fade.FadingPlayerManager;
+import com.fogofwar.box.FogOfWarMinimapOverlay;
+import com.fogofwar.box.FogOfWarWorldOverlay;
+import com.fogofwar.fade.FadingPlayerManager;
+import com.fogofwar.util.DynamicRenderDistance;
 import com.google.inject.Provides;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.plugins.Plugin;
@@ -11,37 +12,42 @@ import net.runelite.client.ui.overlay.OverlayManager;
 
 import javax.inject.Inject;
 @PluginDescriptor(
-		name = "Entity Render Distance",
-		description = "Marks the entity render distance using a fog of war, a customisable border, and predictive fading player markers."
+		name = "Fog of War",
+		description = "Applies a fog of war effect outside of the entity render distance, in both the world and on the minimap."
 )
-public class EntityRenderDistancePlugin extends Plugin {
+public class FogOfWarPlugin extends Plugin {
 	@Inject
 	@SuppressWarnings("unused")
 	private OverlayManager overlayManager;
 	@Inject
 	@SuppressWarnings("unused")
-	private EntityRenderDistanceWorldOverlay worldOverlay;
+	private FogOfWarWorldOverlay worldOverlay;
 	@Inject
 	@SuppressWarnings("unused")
-	private EntityRenderDistanceMinimapOverlay minimapOverlay;
+	private FogOfWarMinimapOverlay minimapOverlay;
 	@Inject
 	@SuppressWarnings("unused")
 	private FadingPlayerManager fadingPlayerManager;
+	@Inject
+	@SuppressWarnings("unused")
+	private DynamicRenderDistance dynamicRenderDistance;
 	@Override
 	protected void startUp() {
 		overlayManager.add(worldOverlay);
 		overlayManager.add(minimapOverlay);
 		fadingPlayerManager.start();
+		dynamicRenderDistance.start();
 	}
 	@Override
 	protected void shutDown() {
 		overlayManager.remove(worldOverlay);
 		overlayManager.remove(minimapOverlay);
 		fadingPlayerManager.stop();
+		dynamicRenderDistance.stop();
 	}
-	@SuppressWarnings("unused")
 	@Provides
-	EntityRenderDistanceConfig provideConfig(ConfigManager configManager) {
-		return configManager.getConfig(EntityRenderDistanceConfig.class);
+	@SuppressWarnings("unused")
+	FogOfWarConfig provideConfig(ConfigManager configManager) {
+		return configManager.getConfig(FogOfWarConfig.class);
 	}
 }

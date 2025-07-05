@@ -1,42 +1,50 @@
-package com.entityrenderdistance.fade;
+package com.fogofwar.fade;
 
-import com.entityrenderdistance.EntityRenderDistanceConfig;
-import com.entityrenderdistance.util.ClientState;
+import com.fogofwar.FogOfWarConfig;
+import com.fogofwar.util.ClientState;
+import com.fogofwar.util.MinimapUtil;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayUtil;
 
 import javax.inject.Inject;
 import java.awt.*;
-public class FadingPlayerOverlay extends Overlay {
+
+public class FadingPlayerMinimapOverlay extends Overlay {
+	private static final int DOT_SIZE = 4;
 	private final Client client;
-	private final EntityRenderDistanceConfig config;
-	private final FadingPlayerManager manager;
+	private final FogOfWarConfig config;
 	private final ClientState clientState;
+	private final FadingPlayerManager manager;
 	@Inject
-	protected FadingPlayerOverlay(Client client, EntityRenderDistanceConfig config, FadingPlayerManager manager, ClientState clientState) {
+	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager) {
 		this.client = client;
 		this.config = config;
-		this.manager = manager;
 		this.clientState = clientState;
+		this.manager = manager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_HIGH);
-		setLayer(OverlayLayer.ABOVE_SCENE);
+		setLayer(OverlayLayer.ABOVE_WIDGETS);
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.enableFadingPlayers() || !config.showFadingInWorld() || clientState.isClientNotReady()) return null;
+		if (!config.enableFadingPlayers() || !config.showFadingOnMinimap() || clientState.isClientNotReady()) return null;
 		if (config.onlyInWilderness() && clientState.isNotInWilderness()) return null;
+		Widget minimapWidget = MinimapUtil.getMinimapWidget(client);
+		if (minimapWidget == null) return null;
+		Shape oldClip = graphics.getClip();
+		graphics.setClip(minimapWidget.getBounds());
 		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) {
 			renderFadingPlayer(graphics, fadingPlayer);
 		}
+		graphics.setClip(oldClip);
 		return null;
 	}
 	private void renderFadingPlayer(Graphics2D graphics, FadingPlayer fadingPlayer) {
@@ -44,27 +52,23 @@ public class FadingPlayerOverlay extends Overlay {
 		WorldView wv = client.getTopLevelWorldView();
 		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
 		if (lp == null) return;
-		Polygon poly = Perspective.getCanvasTilePoly(client, lp);
-		if (poly == null) return;
+		Point mp = Perspective.localToMinimap(client, lp);
+		if (mp == null) return;
 		float fadeDuration = Math.max(1, config.fadeDuration());
 		float remainingTicks = fadeDuration - fadingPlayer.getTicksSinceDisappeared();
 		float opacity = remainingTicks / fadeDuration;
-		if (opacity <= 0) return;
-		Color base = config.fadeColor();
 		Color color = new Color(
-				base.getRed() / 255f,
-				base.getGreen() / 255f,
-				base.getBlue() / 255f,
-				(base.getAlpha() / 255f) * opacity
+				config.fadeColor().getRed() / 255f,
+				config.fadeColor().getGreen() / 255f,
+				config.fadeColor().getBlue() / 255f,
+				opacity
 		);
+		Color shadedColor = color.darker();
+		int x = mp.getX() - DOT_SIZE / 2;
+		int y = mp.getY() - DOT_SIZE / 2 + 1;
+		graphics.setColor(shadedColor);
+		graphics.fillArc(x, y, DOT_SIZE, DOT_SIZE, 180, 180);
 		graphics.setColor(color);
-		graphics.fill(poly);
-		if (config.showFadeNames()) {
-			String name = fadingPlayer.getPlayer().getName();
-			if (name != null) {
-				Point textLoc = Perspective.getCanvasTextLocation(client, graphics, lp, name, 0);
-				if (textLoc != null) OverlayUtil.renderTextLocation(graphics, textLoc, name, color);
-			}
-		}
+		graphics.fillArc(x, y, DOT_SIZE, DOT_SIZE, 0, 180);
 	}
 }

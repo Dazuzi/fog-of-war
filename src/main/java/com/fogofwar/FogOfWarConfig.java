@@ -1,10 +1,10 @@
-package com.entityrenderdistance;
+package com.fogofwar;
 
 import net.runelite.client.config.*;
 
 import java.awt.*;
-@ConfigGroup("entityrenderdistance")
-public interface EntityRenderDistanceConfig extends Config {
+@ConfigGroup("fogofwar")
+public interface FogOfWarConfig extends Config {
 	@ConfigItem(
 			keyName = "onlyInWilderness",
 			name = "Only show in Wilderness",
@@ -12,14 +12,6 @@ public interface EntityRenderDistanceConfig extends Config {
 			position = 0
 	)
 	default boolean onlyInWilderness() { return false; }
-	@Range(min = 1, max = 64)
-	@ConfigItem(
-			keyName = "renderDistanceRadius",
-			name = "Render distance",
-			description = "This does NOT change the game's render distance.<br>It adjusts the overlay's radius to match the current in-game entity render distance (normally 15).<br>Adjust this only if Jagex changes the render distance in a future game update.",
-			position = 1
-	)
-	default int renderDistanceRadius() { return 15; }
 	@ConfigSection(
 			name = "World",
 			description = "Settings for the world overlay",
@@ -29,7 +21,7 @@ public interface EntityRenderDistanceConfig extends Config {
 	@ConfigItem(
 			keyName = "showWorldFog",
 			name = "Fog of war",
-			description = "Hides the area outside the render distance with a fog effect.",
+			description = "Shades the area outside of the render distance with a fog effect.",
 			section = worldSection,
 			position = 0
 	)
@@ -78,7 +70,7 @@ public interface EntityRenderDistanceConfig extends Config {
 	@ConfigItem(
 			keyName = "showMinimapFog",
 			name = "Fog of war",
-			description = "Hides the area outside the render distance on the minimap with a fog effect.",
+			description = "Shades the area outside the render distance on the minimap with a fog effect.",
 			section = minimapSection,
 			position = 0
 	)
@@ -135,7 +127,7 @@ public interface EntityRenderDistanceConfig extends Config {
 	@ConfigItem(
 			keyName = "onlyFadeAtRenderLimit",
 			name = "Only fade at the limit",
-			description = "Only create a fading marker if the player disappears at the edge of the render distance.<br>Note: this will not account for reduced render distance due to too many entities.",
+			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
 			section = fadingPlayerSection,
 			position = 1
 	)
@@ -190,4 +182,37 @@ public interface EntityRenderDistanceConfig extends Config {
 			position = 7
 	)
 	default Color fadeColor() { return new Color(255, 0, 0, 150); }
+	@ConfigSection(
+			name = "Tweaks",
+			description = "Advanced settings for experimental features.",
+			position = 5,
+			closedByDefault = true
+	)
+	String tweaksSection = "tweaksSection";
+	@Range(min = 1, max = 64)
+	@ConfigItem(
+			keyName = "renderDistanceRadius",
+			name = "Maximum render distance",
+			description = "Sets the maximum possible render distance the plugin will use (normally 15).<br>Note: this does NOT change the game's render distance. Adjust this only if Jagex changes the render distance in a future game update.",
+			section = tweaksSection,
+			position = 0
+	)
+	default int renderDistanceRadius() { return 15; }
+	@ConfigItem(
+			keyName = "enableDynamicRenderDistance",
+			name = "Enable dynamic render distance",
+			description = "Automatically scales the render distance based on player count in high-population areas. (Experimental)",
+			section = tweaksSection,
+			position = 1
+	)
+	default boolean enableDynamicRenderDistance() { return false; }
+	@Range(min = 1, max = 500)
+	@ConfigItem(
+			keyName = "dynamicRenderDistancePlayerThreshold",
+			name = "Player count trigger",
+			description = "The number of players needed to trigger the dynamic render distance check. (Experimental)",
+			section = tweaksSection,
+			position = 2
+	)
+	default int dynamicRenderDistancePlayerThreshold() { return 100; }
 }

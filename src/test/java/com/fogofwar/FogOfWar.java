@@ -1,13 +1,13 @@
-package com.entityrenderdistance;
+package com.fogofwar;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class EntityRenderDistance
+public class FogOfWar
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(EntityRenderDistancePlugin.class);
+		ExternalPluginManager.loadBuiltin(FogOfWarPlugin.class);
 		RuneLite.main(args);
 	}
 }

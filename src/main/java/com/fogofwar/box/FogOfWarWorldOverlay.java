@@ -1,7 +1,8 @@
-package com.entityrenderdistance.box;
+package com.fogofwar.box;
 
-import com.entityrenderdistance.EntityRenderDistanceConfig;
-import com.entityrenderdistance.util.ClientState;
+import com.fogofwar.FogOfWarConfig;
+import com.fogofwar.util.ClientState;
+import com.fogofwar.util.DynamicRenderDistance;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -19,42 +20,38 @@ import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EntityRenderDistanceWorldOverlay extends Overlay {
+public class FogOfWarWorldOverlay extends Overlay {
     private final Client client;
-    private final EntityRenderDistanceConfig config;
+    private final FogOfWarConfig config;
     private final ClientState clientState;
-
+    private final DynamicRenderDistance dynamicRenderDistance;
     @Inject
-    public EntityRenderDistanceWorldOverlay(Client client, EntityRenderDistanceConfig config, ClientState clientState) {
+    public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance) {
         this.client = client;
         this.config = config;
         this.clientState = clientState;
+        this.dynamicRenderDistance = dynamicRenderDistance;
         setPosition(OverlayPosition.DYNAMIC);
         setPriority(Overlay.PRIORITY_LOW);
         setLayer(OverlayLayer.ABOVE_SCENE);
     }
-
     @Override
     public Dimension render(Graphics2D graphics) {
         if (clientState.isClientNotReady()) return null;
         if (config.onlyInWilderness() && clientState.isNotInWilderness()) return null;
-
         if (config.showWorldFog()) {
             renderWorldFog(graphics);
         }
-
         if (config.showWorldBorder()) {
-            int radius = config.renderDistanceRadius();
+            int radius = dynamicRenderDistance.getCurrentRenderDistance();
             WorldPoint centerWp = client.getLocalPlayer().getWorldLocation();
             GeneralPath borderPath = createBorderPath(centerWp, radius);
             if (borderPath != null) {
                 renderPath(graphics, borderPath);
             }
         }
-
         return null;
     }
-
     private void renderWorldFog(Graphics2D graphics) {
         Rectangle viewport = new Rectangle(
                 client.getViewportXOffset(),
@@ -62,11 +59,9 @@ public class EntityRenderDistanceWorldOverlay extends Overlay {
                 client.getViewportWidth(),
                 client.getViewportHeight()
         );
-
-        int radius = config.renderDistanceRadius();
+        int radius = dynamicRenderDistance.getCurrentRenderDistance();
         WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
         GeneralPath renderAreaPath = createRenderAreaBoundary(playerLocation, radius);
-
         if (renderAreaPath != null) {
             Area screenArea = new Area(viewport);
             Area renderArea = new Area(renderAreaPath);
@@ -115,7 +110,6 @@ public class EntityRenderDistanceWorldOverlay extends Overlay {
         for (int y = -radius + sampleRate; y < radius; y += sampleRate) { addBorderPoint(borderPoints, center.getX() - radius, center.getY() + y, center.getPlane(), -64, 0, worldView); }
         return createPathFromPoints(borderPoints);
     }
-
     private GeneralPath createPathFromPoints(List<Point> points) {
         if (points.isEmpty()) return null;
         GeneralPath path = new GeneralPath();
@@ -133,7 +127,6 @@ public class EntityRenderDistanceWorldOverlay extends Overlay {
         if (pathStarted) path.closePath();
         return pathStarted ? path : null;
     }
-
     private void renderPath(Graphics2D graphics, GeneralPath path) {
         graphics.setColor(config.worldBorderColour());
         graphics.setStroke(new BasicStroke(config.worldBorderThickness()));

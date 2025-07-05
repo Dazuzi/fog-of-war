@@ -1,6 +1,7 @@
-package com.entityrenderdistance.fade;
+package com.fogofwar.fade;
 
-import com.entityrenderdistance.EntityRenderDistanceConfig;
+import com.fogofwar.FogOfWarConfig;
+import com.fogofwar.util.DynamicRenderDistance;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
 @Singleton
 public class FadingPlayerManager {
 	@Inject
@@ -25,7 +27,7 @@ public class FadingPlayerManager {
 	private Client client;
 	@Inject
 	@SuppressWarnings("unused")
-	private EntityRenderDistanceConfig config;
+	private FogOfWarConfig config;
 	@Inject
 	@SuppressWarnings("unused")
 	private OverlayManager overlayManager;
@@ -38,6 +40,9 @@ public class FadingPlayerManager {
 	@Inject
 	@SuppressWarnings("unused")
 	private FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
+	@Inject
+	@SuppressWarnings("unused")
+	private DynamicRenderDistance dynamicRenderDistance;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
 	private final Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
@@ -54,13 +59,13 @@ public class FadingPlayerManager {
 		eventBus.unregister(this);
 		clearAllTracking();
 	}
-	@SuppressWarnings("unused")
 	@Subscribe
+	@SuppressWarnings("unused")
 	public void onGameStateChanged(GameStateChanged event) {
 		if (event.getGameState() == GameState.LOADING) clearAllTracking();
 	}
-	@SuppressWarnings("unused")
 	@Subscribe
+	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
 		if (client.getGameState() != GameState.LOGGED_IN) {
 			clearAllTracking();
@@ -85,7 +90,7 @@ public class FadingPlayerManager {
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
 			if (fp.getTicksSinceDisappeared() > config.fadeDuration()) return true;
 			WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
-			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= config.renderDistanceRadius()) {
+			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= dynamicRenderDistance.getCurrentRenderDistance()) {
 				return true;
 			}
 			if (config.extrapolateMovement()) {
@@ -125,16 +130,17 @@ public class FadingPlayerManager {
 					? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
 					: new WorldPoint(0, 0, 0);
 			WorldPoint initialFadeLocation;
+			int renderDistance = dynamicRenderDistance.getCurrentRenderDistance();
 			int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
-			boolean wasOnRenderEdge = lastLocation.distanceTo(currentLocalPlayerLocation) >= config.renderDistanceRadius() - 1;
+			boolean wasOnRenderEdge = lastLocation.distanceTo(currentLocalPlayerLocation) >= renderDistance - 1;
 			WorldPoint predictedNextLocation = new WorldPoint(lastLocation.getX() + velocity.getX(), lastLocation.getY() + velocity.getY(), lastLocation.getPlane());
-			boolean isPredictedInsideRender = predictedNextLocation.distanceTo(currentLocalPlayerLocation) <= config.renderDistanceRadius();
+			boolean isPredictedInsideRender = predictedNextLocation.distanceTo(currentLocalPlayerLocation) <= renderDistance;
 			boolean isWallHuggingCase = isPredictedInsideRender && wasOnRenderEdge && velocityMagnitude > 0;
 			if (isWallHuggingCase) {
 				int dx = lastLocation.getX() - currentLocalPlayerLocation.getX();
 				int dy = lastLocation.getY() - currentLocalPlayerLocation.getY();
-				int pushX = (Math.abs(dx) >= config.renderDistanceRadius() - 1) ? Integer.signum(dx) : 0;
-				int pushY = (Math.abs(dy) >= config.renderDistanceRadius() - 1) ? Integer.signum(dy) : 0;
+				int pushX = (Math.abs(dx) >= renderDistance - 1) ? Integer.signum(dx) : 0;
+				int pushY = (Math.abs(dy) >= renderDistance - 1) ? Integer.signum(dy) : 0;
 				initialFadeLocation = new WorldPoint(predictedNextLocation.getX() + pushX, predictedNextLocation.getY() + pushY, predictedNextLocation.getPlane());
 			} else if (velocityMagnitude > 0) {
 				initialFadeLocation = predictedNextLocation;
@@ -161,7 +167,7 @@ public class FadingPlayerManager {
 				}
 			}
 			if (config.onlyFadeAtRenderLimit()) {
-				if (initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= config.renderDistanceRadius()) {
+				if (initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= renderDistance) {
 					continue;
 				}
 			}
