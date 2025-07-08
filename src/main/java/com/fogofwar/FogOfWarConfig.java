@@ -3,7 +3,7 @@ package com.fogofwar;
 import net.runelite.client.config.*;
 
 import java.awt.*;
-@ConfigGroup("fogofwar")
+@ConfigGroup("entityrenderdistance")
 public interface FogOfWarConfig extends Config {
 	@ConfigItem(
 			keyName = "onlyInWilderness",
