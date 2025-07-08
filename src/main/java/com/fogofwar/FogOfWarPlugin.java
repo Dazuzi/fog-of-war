@@ -14,7 +14,7 @@ import javax.inject.Inject;
 @PluginDescriptor(
 		name = "Fog of War",
 		description = "Applies a fog of war effect outside of the entity render distance, in both the world and on the minimap.",
-		configName = "entityrenderdistance"
+		configName = "EntityRenderDistancePlugin"
 )
 public class FogOfWarPlugin extends Plugin {
 	@Inject
