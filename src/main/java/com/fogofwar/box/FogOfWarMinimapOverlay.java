@@ -63,8 +63,12 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		int radius = dynamicRenderDistance.getCurrentRenderDistance();
 		WorldPoint centerWp = client.getLocalPlayer().getWorldLocation();
 		List<Point> boundaryPoints = getBoundaryPointsWithNulls(centerWp, radius);
+		GeneralPath fogPath = createClippedRenderAreaPath(boundaryPoints, minimap.getBounds());
+		if (fogPath == null) {
+			graphics.setClip(oldClip);
+			return null;
+		}
 		if (config.showMinimapFog()) {
-			GeneralPath fogPath = createClippedRenderAreaPath(boundaryPoints, minimap.getBounds());
 			renderMinimapFog(graphics, minimapClipShape, fogPath);
 		}
 		if (config.showMinimapBorder()) {
@@ -111,10 +115,12 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		return path;
 	}
 	private void renderMinimapFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath renderAreaPath) {
-		Area fogArea = new Area(minimapClipShape);
-		if (renderAreaPath != null) {
-			fogArea.subtract(new Area(renderAreaPath));
+		Area renderArea = new Area(renderAreaPath);
+		if (renderArea.contains(minimapClipShape.getBounds2D())) {
+			return;
 		}
+		Area fogArea = new Area(minimapClipShape);
+		fogArea.subtract(renderArea);
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogArea);
 	}
