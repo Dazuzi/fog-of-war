@@ -39,8 +39,6 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	private static final int ORBS_GROUP_ID = 160;
 	private static final int WORLD_MAP_ORB_CHILD_ID = 48;
 	private static final int HALF_TILE_OFFSET = 64;
-
-	private final List<Point> boundaryPoints = new ArrayList<>();
 	@Inject
 	public FogOfWarMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
 		this.client = client;
@@ -65,12 +63,13 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		int radius = dynamicRenderDistance.getCurrentRenderDistance();
 		WorldPoint centerWp = client.getLocalPlayer().getWorldLocation();
 		List<Point> boundaryPoints = getBoundaryPointsWithNulls(centerWp, radius);
-		GeneralPath renderAreaPath = createClippedRenderAreaPath(boundaryPoints, minimap.getBounds());
 		if (config.showMinimapFog()) {
-			renderMinimapFog(graphics, minimapClipShape, renderAreaPath);
+			GeneralPath fogPath = createClippedRenderAreaPath(boundaryPoints, minimap.getBounds());
+			renderMinimapFog(graphics, minimapClipShape, fogPath);
 		}
-		if (config.showMinimapBorder() && renderAreaPath != null) {
-			renderMinimapBorder(graphics, renderAreaPath);
+		if (config.showMinimapBorder()) {
+			GeneralPath borderPath = createMinimapBorderPath(boundaryPoints);
+			renderMinimapBorder(graphics, borderPath);
 		}
 		graphics.setClip(oldClip);
 		return null;
@@ -94,10 +93,22 @@ public class FogOfWarMinimapOverlay extends Overlay {
 
 		return clipArea;
 	}
-	private void renderMinimapBorder(Graphics2D graphics, GeneralPath renderAreaPath) {
+	private void renderMinimapBorder(Graphics2D graphics, GeneralPath borderPath) {
 		graphics.setColor(config.minimapBorderColour());
 		graphics.setStroke(new BasicStroke(config.minimapBorderThickness()));
-		graphics.draw(renderAreaPath);
+		graphics.draw(borderPath);
+	}
+	private GeneralPath createMinimapBorderPath(List<Point> boundaryPoints) {
+		GeneralPath path = new GeneralPath();
+		for (int i = 0; i < boundaryPoints.size(); i++) {
+			Point p1 = boundaryPoints.get(i);
+			Point p2 = boundaryPoints.get((i + 1) % boundaryPoints.size());
+			if (p1 != null && p2 != null) {
+				path.moveTo(p1.getX(), p1.getY());
+				path.lineTo(p2.getX(), p2.getY());
+			}
+		}
+		return path;
 	}
 	private void renderMinimapFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath renderAreaPath) {
 		Area fogArea = new Area(minimapClipShape);
@@ -174,7 +185,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		}
 	}
 	private List<Point> getBoundaryPointsWithNulls(WorldPoint center, int radius) {
-		boundaryPoints.clear();
+		List<Point> boundaryPoints = new ArrayList<>();
 		int sampleRate = Math.max(1, radius / 12);
 		boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() - radius, center.getY() - radius, center.getPlane()), -HALF_TILE_OFFSET, -HALF_TILE_OFFSET));
 		for (int x = -radius; x <= radius; x += sampleRate) { boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + x, center.getY() - radius, center.getPlane()), 0, -HALF_TILE_OFFSET)); }
