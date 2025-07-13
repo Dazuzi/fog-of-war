@@ -34,7 +34,7 @@ public interface FogOfWarConfig extends Config {
 			section = worldSection,
 			position = 1
 	)
-	default Color worldFogColour() { return new Color(0, 0, 0, 75); }
+	default Color worldFogColour() { return new Color(0, 0, 0, 125); }
 	@ConfigItem(
 			keyName = "showWorldBorder",
 			name = "Show border",
@@ -51,7 +51,7 @@ public interface FogOfWarConfig extends Config {
 			section = worldSection,
 			position = 3
 	)
-	default Color worldBorderColour() { return new Color(0, 0, 0, 100); }
+	default Color worldBorderColour() { return new Color(0, 0, 0, 125); }
 	@Range(min = 1, max = 16)
 	@ConfigItem(
 			keyName = "worldBorderThickness",
@@ -83,7 +83,7 @@ public interface FogOfWarConfig extends Config {
 			section = minimapSection,
 			position = 1
 	)
-	default Color minimapFogColour() { return new Color(0, 0, 0, 75); }
+	default Color minimapFogColour() { return new Color(0, 0, 0, 125); }
 	@ConfigItem(
 			keyName = "showMinimapBorder",
 			name = "Show border",
@@ -100,7 +100,7 @@ public interface FogOfWarConfig extends Config {
 			section = minimapSection,
 			position = 3
 	)
-	default Color minimapBorderColour() { return new Color(0, 0, 0, 100); }
+	default Color minimapBorderColour() { return new Color(0, 0, 0, 125); }
 	@Range(min = 1, max = 16)
 	@ConfigItem(
 			keyName = "minimapBorderThickness",
@@ -201,7 +201,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigItem(
 			keyName = "enableDynamicRenderDistance",
 			name = "Enable dynamic render distance",
-			description = "Automatically scales the render distance based on player count in high-population areas. (Experimental)",
+			description = "(Experimental) Automatically scales the render distance based on player count in high-population areas.",
 			section = tweaksSection,
 			position = 1
 	)
@@ -210,7 +210,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigItem(
 			keyName = "dynamicRenderDistancePlayerThreshold",
 			name = "Player count trigger",
-			description = "The number of players needed to trigger the dynamic render distance check. (Experimental)",
+			description = "(Experimental) The number of players needed to trigger the dynamic render distance check.",
 			section = tweaksSection,
 			position = 2
 	)

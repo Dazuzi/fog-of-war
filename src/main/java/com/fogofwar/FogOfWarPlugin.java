@@ -3,6 +3,7 @@ package com.fogofwar;
 import com.fogofwar.box.FogOfWarMinimapOverlay;
 import com.fogofwar.box.FogOfWarWorldOverlay;
 import com.fogofwar.fade.FadingPlayerManager;
+import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.DynamicRenderDistance;
 import com.google.inject.Provides;
 import net.runelite.client.config.ConfigManager;
@@ -13,7 +14,7 @@ import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 @PluginDescriptor(
 		name = "Fog of War",
-		description = "Applies a fog of war effect outside of the entity render distance, in both the world and on the minimap.",
+		description = "Applies a fog of war effect outside of the player render distance, in both the world and on the minimap.",
 		configName = "EntityRenderDistancePlugin"
 )
 public class FogOfWarPlugin extends Plugin {
@@ -32,12 +33,16 @@ public class FogOfWarPlugin extends Plugin {
 	@Inject
 	@SuppressWarnings("unused")
 	private DynamicRenderDistance dynamicRenderDistance;
+	@Inject
+	@SuppressWarnings("unused")
+	private AreaManager areaManager;
 	@Override
 	protected void startUp() {
 		overlayManager.add(worldOverlay);
 		overlayManager.add(minimapOverlay);
 		fadingPlayerManager.start();
 		dynamicRenderDistance.start();
+		areaManager.start();
 	}
 	@Override
 	protected void shutDown() {
@@ -45,6 +50,7 @@ public class FogOfWarPlugin extends Plugin {
 		overlayManager.remove(minimapOverlay);
 		fadingPlayerManager.stop();
 		dynamicRenderDistance.stop();
+		areaManager.stop();
 	}
 	@Provides
 	@SuppressWarnings("unused")
