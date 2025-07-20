@@ -4,9 +4,7 @@ import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.DynamicRenderDistance;
-import net.runelite.api.Client;
-import net.runelite.api.Perspective;
-import net.runelite.api.Point;
+import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.Overlay;
@@ -26,8 +24,7 @@ public class FogOfWarWorldOverlay extends Overlay {
     private final ClientState clientState;
     private final DynamicRenderDistance dynamicRenderDistance;
     private final AreaManager areaManager;
-
-    private final List<Point> boundaryPoints = new ArrayList<>();
+    private final List<net.runelite.api.Point> boundaryPoints = new ArrayList<>();
     private final GeneralPath path = new GeneralPath();
     @Inject
     public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
@@ -64,6 +61,23 @@ public class FogOfWarWorldOverlay extends Overlay {
         }
         return null;
     }
+    private void subtractEntitiesFromFog(Area fogArea) {
+        WorldView worldView = client.getTopLevelWorldView();
+        for (Player player : worldView.players()) {
+            if (player == null || player.equals(client.getLocalPlayer())) continue;
+            Shape convexHull = player.getConvexHull();
+            if (convexHull != null) {
+                fogArea.subtract(new Area(convexHull));
+            }
+        }
+        for (NPC npc : worldView.npcs()) {
+            if (npc == null) continue;
+            Shape convexHull = npc.getConvexHull();
+            if (convexHull != null) {
+                fogArea.subtract(new Area(convexHull));
+            }
+        }
+    }
     private void renderWorldFog(Graphics2D graphics, GeneralPath renderAreaBoundary) {
         Rectangle viewport = new Rectangle(
                 client.getViewportXOffset(),
@@ -73,6 +87,9 @@ public class FogOfWarWorldOverlay extends Overlay {
         );
         Area screenArea = new Area(viewport);
         screenArea.subtract(new Area(renderAreaBoundary));
+        if (config.excludeEntities()) {
+            subtractEntitiesFromFog(screenArea);
+        }
         graphics.setColor(config.worldFogColour());
         graphics.fill(screenArea);
     }
@@ -95,14 +112,14 @@ public class FogOfWarWorldOverlay extends Overlay {
         for (int i = 0; i < sampleCount; i++) { addPoint(boundaryPoints, centerLp.getX() - localRadius, centerLp.getY() - localRadius + (i * step), plane); }
         return createPathFromPoints(boundaryPoints);
     }
-    private void addPoint(List<Point> points, int localX, int localY, int plane) {
+    private void addPoint(List<net.runelite.api.Point> points, int localX, int localY, int plane) {
         LocalPoint lp = new LocalPoint(localX, localY, client.getTopLevelWorldView());
-        Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
+        net.runelite.api.Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
         if (canvasPoint != null) {
             points.add(canvasPoint);
         }
     }
-    private GeneralPath createPathFromPoints(List<Point> points) {
+    private GeneralPath createPathFromPoints(List<net.runelite.api.Point> points) {
         if (points.isEmpty()) return null;
         path.reset();
         path.moveTo(points.get(0).getX(), points.get(0).getY());

@@ -36,11 +36,19 @@ public interface FogOfWarConfig extends Config {
 	)
 	default Color worldFogColour() { return new Color(0, 0, 0, 125); }
 	@ConfigItem(
+			keyName = "excludeEntities",
+			name = "Exclude Entities from Fog",
+			description = "Prevents the fog from drawing on top of players and NPCs. May impact performance in crowded areas.",
+			section = worldSection,
+			position = 2
+	)
+	default boolean excludeEntities() { return true; }
+	@ConfigItem(
 			keyName = "showWorldBorder",
 			name = "Show border",
 			description = "Shows the render distance border in the world view.",
 			section = worldSection,
-			position = 2
+			position = 3
 	)
 	default boolean showWorldBorder() { return false; }
 	@Alpha
@@ -49,7 +57,7 @@ public interface FogOfWarConfig extends Config {
 			name = "Border colour",
 			description = "The colour of the world render distance border.",
 			section = worldSection,
-			position = 3
+			position = 4
 	)
 	default Color worldBorderColour() { return new Color(0, 0, 0, 125); }
 	@Range(min = 1, max = 16)
@@ -58,7 +66,7 @@ public interface FogOfWarConfig extends Config {
 			name = "Border thickness",
 			description = "The thickness of the world render distance border.",
 			section = worldSection,
-			position = 4
+			position = 5
 	)
 	default int worldBorderThickness() { return 1; }
 	@ConfigSection(
