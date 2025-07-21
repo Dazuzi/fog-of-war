@@ -64,7 +64,7 @@ public class FogOfWarWorldOverlay extends Overlay {
     private void subtractEntitiesFromFog(Area fogArea) {
         WorldView worldView = client.getTopLevelWorldView();
         for (Player player : worldView.players()) {
-            if (player == null || player.equals(client.getLocalPlayer())) continue;
+            if (player == null) continue;
             Shape convexHull = player.getConvexHull();
             if (convexHull != null) {
                 fogArea.subtract(new Area(convexHull));
