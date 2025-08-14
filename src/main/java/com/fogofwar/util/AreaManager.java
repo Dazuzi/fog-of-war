@@ -29,6 +29,7 @@ public class AreaManager {
         excludedAreas.add(new ExcludedArea(2215, 5935, 2325, 6035, 1, 2));  // Hallowed Sepulchre Floor 1
         excludedAreas.add(new ExcludedArea(2475, 5935, 2585, 6035, 1, 2));  // Hallowed Sepulchre Floor 2
         excludedAreas.add(new ExcludedArea(2225, 5795, 2575, 5915, 1, 2));  // Hallowed Sepulchre Floors 3-5
+        excludedAreas.add(new ExcludedArea(3136, 4216, 3366, 4474, 0));     // Theatre of Blood
     }
     public void start() {
         eventBus.register(this);
