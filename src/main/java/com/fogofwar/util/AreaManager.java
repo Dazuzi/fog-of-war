@@ -24,12 +24,15 @@ public class AreaManager {
     public AreaManager(Client client, EventBus eventBus) {
         this.client = client;
         this.eventBus = eventBus;
-        excludedAreas.add(new ExcludedArea(2367, 5053, 2432, 5119, 0));     // TzHaar Fight Cave
-        excludedAreas.add(new ExcludedArea(2256, 5328, 2286, 5359, 0));     // Inferno
-        excludedAreas.add(new ExcludedArea(2215, 5935, 2325, 6035, 1, 2));  // Hallowed Sepulchre Floor 1
-        excludedAreas.add(new ExcludedArea(2475, 5935, 2585, 6035, 1, 2));  // Hallowed Sepulchre Floor 2
-        excludedAreas.add(new ExcludedArea(2225, 5795, 2575, 5915, 1, 2));  // Hallowed Sepulchre Floors 3-5
-        excludedAreas.add(new ExcludedArea(3136, 4216, 3366, 4474, 0));     // Theatre of Blood
+        excludedAreas.add(new ExcludedArea(2367, 5053, 2432, 5119, 0));         // TzHaar Fight Cave
+        excludedAreas.add(new ExcludedArea(2256, 5328, 2286, 5359, 0));         // Inferno
+        excludedAreas.add(new ExcludedArea(3500, 5100, 4000, 5440, 0, 1));      // Tombs of Amascut
+        excludedAreas.add(new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2));   // Theatre of Blood
+        excludedAreas.add(new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2));   // Hallowed Sepulchre Floor 1
+        excludedAreas.add(new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2));   // Hallowed Sepulchre Floor 2
+        excludedAreas.add(new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2));   // Hallowed Sepulchre Floors 3-5
+        excludedAreas.add(new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2));   // Chambers of Xeric
+        excludedAreas.add(new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2));   // Chambers of Xeric
     }
     public void start() {
         eventBus.register(this);
