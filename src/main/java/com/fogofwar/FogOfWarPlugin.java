@@ -1,9 +1,10 @@
 package com.fogofwar;
-
 import com.fogofwar.box.FogOfWarMinimapOverlay;
 import com.fogofwar.box.FogOfWarWorldOverlay;
 import com.fogofwar.debug.PlaneDisplayOverlay;
 import com.fogofwar.fade.FadingPlayerManager;
+import com.fogofwar.fade.FadingPlayerMinimapOverlay;
+import com.fogofwar.fade.FadingPlayerOverlay;
 import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.DynamicRenderDistance;
 import com.google.inject.Provides;
@@ -11,7 +12,6 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
-
 import javax.inject.Inject;
 @PluginDescriptor(
 		name = "Fog of War",
@@ -33,6 +33,12 @@ public class FogOfWarPlugin extends Plugin {
 	private FadingPlayerManager fadingPlayerManager;
 	@Inject
 	@SuppressWarnings("unused")
+	private FadingPlayerOverlay fadingPlayerOverlay;
+	@Inject
+	@SuppressWarnings("unused")
+	private FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
+	@Inject
+	@SuppressWarnings("unused")
 	private DynamicRenderDistance dynamicRenderDistance;
 	@Inject
 	@SuppressWarnings("unused")
@@ -45,6 +51,8 @@ public class FogOfWarPlugin extends Plugin {
 		overlayManager.add(worldOverlay);
 		overlayManager.add(minimapOverlay);
 		overlayManager.add(planeDisplayOverlay);
+		overlayManager.add(fadingPlayerOverlay);
+		overlayManager.add(fadingPlayerMinimapOverlay);
 		fadingPlayerManager.start();
 		dynamicRenderDistance.start();
 		areaManager.start();
@@ -54,6 +62,8 @@ public class FogOfWarPlugin extends Plugin {
 		overlayManager.remove(worldOverlay);
 		overlayManager.remove(minimapOverlay);
 		overlayManager.remove(planeDisplayOverlay);
+		overlayManager.remove(fadingPlayerOverlay);
+		overlayManager.remove(fadingPlayerMinimapOverlay);
 		fadingPlayerManager.stop();
 		dynamicRenderDistance.stop();
 		areaManager.stop();

@@ -11,7 +11,6 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
-import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashMap;
@@ -22,10 +21,7 @@ import java.util.Set;
 public class FadingPlayerManager {
 	private final Client client;
 	private final FogOfWarConfig config;
-	private final OverlayManager overlayManager;
 	private final EventBus eventBus;
-	private final FadingPlayerOverlay fadingPlayerOverlay;
-	private final FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
 	@Getter
@@ -33,24 +29,17 @@ public class FadingPlayerManager {
 	private final Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
 	private final Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
 	@Inject
-	public FadingPlayerManager(Client client, FogOfWarConfig config, OverlayManager overlayManager, EventBus eventBus, FadingPlayerOverlay fadingPlayerOverlay, FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
+	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
 		this.client = client;
 		this.config = config;
-		this.overlayManager = overlayManager;
 		this.eventBus = eventBus;
-		this.fadingPlayerOverlay = fadingPlayerOverlay;
-		this.fadingPlayerMinimapOverlay = fadingPlayerMinimapOverlay;
 		this.dynamicRenderDistance = dynamicRenderDistance;
 		this.areaManager = areaManager;
 	}
 	public void start() {
-		overlayManager.add(fadingPlayerOverlay);
-		overlayManager.add(fadingPlayerMinimapOverlay);
 		eventBus.register(this);
 	}
 	public void stop() {
-		overlayManager.remove(fadingPlayerOverlay);
-		overlayManager.remove(fadingPlayerMinimapOverlay);
 		eventBus.unregister(this);
 		clearAllTracking();
 	}
@@ -88,15 +77,9 @@ public class FadingPlayerManager {
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
 			if (fp.getTicksSinceDisappeared() > config.fadeDuration()) return true;
 			WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
-			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= dynamicRenderDistance.getCurrentRenderDistance()) {
-				return true;
-			}
+			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= dynamicRenderDistance.getCurrentRenderDistance()) return true;
 			if (config.extrapolateMovement()) {
-				WorldPoint nextPos = new WorldPoint(
-						fp.getLastLocation().getX() + fp.getVelocity().getX(),
-						fp.getLastLocation().getY() + fp.getVelocity().getY(),
-						fp.getLastLocation().getPlane()
-				);
+				WorldPoint nextPos = new WorldPoint(fp.getLastLocation().getX() + fp.getVelocity().getX(), fp.getLastLocation().getY() + fp.getVelocity().getY(), fp.getLastLocation().getPlane());
 				fp.setLastLocation(nextPos);
 			}
 			return false;
@@ -127,9 +110,7 @@ public class FadingPlayerManager {
 			int distanceFromPlayer = lastLocation.distanceTo(currentLocalPlayerLocation);
 			boolean isAtRenderLimit = distanceFromPlayer >= renderDistance - 1;
 			boolean isRunningNearLimit = distanceFromPlayer >= renderDistance - 2 && velocityMagnitude >= 2;
-			if (config.onlyFadeAtRenderLimit()) {
-				if (!isAtRenderLimit && !isRunningNearLimit) continue;
-			}
+			if (config.onlyFadeAtRenderLimit() && !isAtRenderLimit && !isRunningNearLimit) continue;
 			WorldPoint initialFadeLocation;
 			if (config.extrapolateMovement()) {
 				int dx = lastLocation.getX() - currentLocalPlayerLocation.getX();
@@ -146,16 +127,10 @@ public class FadingPlayerManager {
 					initialFadeLocation = predictedNextLocation;
 					if (isAtRenderLimit || isRunningNearLimit) {
 						while (initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= renderDistance) {
-							int pushX = 0;
-							int pushY = 0;
-							if (Math.abs(dx) > Math.abs(dy)) {
-								pushX = Integer.signum(dx);
-							} else if (Math.abs(dy) > Math.abs(dx)) {
-								pushY = Integer.signum(dy);
-							} else {
-								pushX = Integer.signum(dx);
-								pushY = Integer.signum(dy);
-							}
+							int pushX = 0, pushY = 0;
+							if (Math.abs(dx) > Math.abs(dy)) pushX = Integer.signum(dx);
+							else if (Math.abs(dy) > Math.abs(dx)) pushY = Integer.signum(dy);
+							else { pushX = Integer.signum(dx); pushY = Integer.signum(dy); }
 							initialFadeLocation = new WorldPoint(initialFadeLocation.getX() + pushX, initialFadeLocation.getY() + pushY, initialFadeLocation.getPlane());
 						}
 					}
