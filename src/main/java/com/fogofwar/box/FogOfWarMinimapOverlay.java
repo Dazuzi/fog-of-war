@@ -1,5 +1,4 @@
 package com.fogofwar.box;
-
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.ClientState;
@@ -14,7 +13,6 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-
 import javax.inject.Inject;
 import java.awt.*;
 import java.awt.geom.Area;
@@ -24,14 +22,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-
 public class FogOfWarMinimapOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
-	private static final int MINIMAP_GROUP_ID = 164;
 	private static final int HEALTH_ORB_CHILD_ID = 16;
 	private static final int PRAYER_ORB_CHILD_ID = 17;
 	private static final int RUN_ORB_CHILD_ID = 18;
@@ -52,9 +48,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (areaManager.isPlayerInExcludedArea() || clientState.isClientNotReady() || (config.onlyInWilderness() && clientState.isNotInWilderness())) {
-			return null;
-		}
+		if (clientState.isSuppressed(config, areaManager)) return null;
 		Widget minimap = MinimapUtil.getMinimapWidget(client);
 		if (minimap == null || minimap.isHidden()) return null;
 		Shape minimapClipShape = getMinimapClipShape(minimap);
@@ -68,13 +62,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			graphics.setClip(oldClip);
 			return null;
 		}
-		if (config.showMinimapFog()) {
-			renderMinimapFog(graphics, minimapClipShape, fogPath);
-		}
-		if (config.showMinimapBorder()) {
-			GeneralPath borderPath = createMinimapBorderPath(boundaryPoints);
-			renderMinimapBorder(graphics, borderPath);
-		}
+		if (config.showMinimapFog()) renderMinimapFog(graphics, minimapClipShape, fogPath);
+		if (config.showMinimapBorder()) renderMinimapBorder(graphics, fogPath);
 		graphics.setClip(oldClip);
 		return null;
 	}
@@ -83,7 +72,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		Area clipArea = new Area(new Ellipse2D.Double(bounds.getX() - 1, bounds.getY() - 1, bounds.getWidth() + 2, bounds.getHeight() + 2));
 		int[] orbChildIds = {HEALTH_ORB_CHILD_ID, PRAYER_ORB_CHILD_ID, RUN_ORB_CHILD_ID, SPEC_ORB_CHILD_ID};
 		for (int childId : orbChildIds) {
-			Widget orb = client.getWidget(MINIMAP_GROUP_ID, childId);
+			Widget orb = client.getWidget(MinimapUtil.MINIMAP_GROUP_ID, childId);
 			if (orb != null && !orb.isHidden()) {
 				Rectangle orbBounds = orb.getBounds();
 				clipArea.subtract(new Area(new Ellipse2D.Double(orbBounds.getX(), orbBounds.getY(), orbBounds.getWidth(), orbBounds.getHeight())));
@@ -96,28 +85,14 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		}
 		return clipArea;
 	}
-	private void renderMinimapBorder(Graphics2D graphics, GeneralPath borderPath) {
+	private void renderMinimapBorder(Graphics2D graphics, GeneralPath path) {
 		graphics.setColor(config.minimapBorderColour());
 		graphics.setStroke(new BasicStroke(config.minimapBorderThickness()));
-		graphics.draw(borderPath);
-	}
-	private GeneralPath createMinimapBorderPath(List<Point> boundaryPoints) {
-		GeneralPath path = new GeneralPath();
-		for (int i = 0; i < boundaryPoints.size(); i++) {
-			Point p1 = boundaryPoints.get(i);
-			Point p2 = boundaryPoints.get((i + 1) % boundaryPoints.size());
-			if (p1 != null && p2 != null) {
-				path.moveTo(p1.getX(), p1.getY());
-				path.lineTo(p2.getX(), p2.getY());
-			}
-		}
-		return path;
+		graphics.draw(path);
 	}
 	private void renderMinimapFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath renderAreaPath) {
 		Area renderArea = new Area(renderAreaPath);
-		if (renderArea.contains(minimapClipShape.getBounds2D())) {
-			return;
-		}
+		if (renderArea.contains(minimapClipShape.getBounds2D())) return;
 		Area fogArea = new Area(minimapClipShape);
 		fogArea.subtract(renderArea);
 		graphics.setColor(config.minimapFogColour());
@@ -130,9 +105,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			GeneralPath path = new GeneralPath();
 			Point first = visiblePoints.get(0);
 			path.moveTo(first.getX(), first.getY());
-			for (int i = 1; i < visiblePoints.size(); i++) {
-				path.lineTo(visiblePoints.get(i).getX(), visiblePoints.get(i).getY());
-			}
+			for (int i = 1; i < visiblePoints.size(); i++) path.lineTo(visiblePoints.get(i).getX(), visiblePoints.get(i).getY());
 			path.closePath();
 			return path;
 		}
@@ -163,10 +136,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 							break;
 						}
 					}
-					if (nextVisibleIndex != -1) {
-						Point nextVisiblePoint = boundaryPoints.get(nextVisibleIndex);
-						addArcToPath(path, p1, nextVisiblePoint, minimapBounds);
-					}
+					if (nextVisibleIndex != -1) addArcToPath(path, p1, boundaryPoints.get(nextVisibleIndex), minimapBounds);
 				}
 			}
 		}
@@ -184,29 +154,26 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		int numSteps = (int) (Math.abs(sweep) / 10) + 1;
 		for (int i = 1; i <= numSteps; i++) {
 			double currentAngleRad = Math.toRadians(startAngle + (sweep * i / numSteps));
-			float x = (float) (centerX + radius * Math.cos(currentAngleRad));
-			float y = (float) (centerY + radius * Math.sin(currentAngleRad));
-			path.lineTo(x, y);
+			path.lineTo((float) (centerX + radius * Math.cos(currentAngleRad)), (float) (centerY + radius * Math.sin(currentAngleRad)));
 		}
 	}
 	private List<Point> getBoundaryPointsWithNulls(WorldPoint center, int radius) {
 		List<Point> boundaryPoints = new ArrayList<>();
 		int sampleRate = Math.max(1, radius / 12);
 		boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() - radius, center.getY() - radius, center.getPlane()), -HALF_TILE_OFFSET, -HALF_TILE_OFFSET));
-		for (int x = -radius; x <= radius; x += sampleRate) { boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + x, center.getY() - radius, center.getPlane()), 0, -HALF_TILE_OFFSET)); }
+		for (int x = -radius; x <= radius; x += sampleRate) boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + x, center.getY() - radius, center.getPlane()), 0, -HALF_TILE_OFFSET));
 		boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + radius, center.getY() - radius, center.getPlane()), HALF_TILE_OFFSET, -HALF_TILE_OFFSET));
-		for (int y = -radius; y <= radius; y += sampleRate) { boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + radius, center.getY() + y, center.getPlane()), HALF_TILE_OFFSET, 0)); }
+		for (int y = -radius; y <= radius; y += sampleRate) boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + radius, center.getY() + y, center.getPlane()), HALF_TILE_OFFSET, 0));
 		boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + radius, center.getY() + radius, center.getPlane()), HALF_TILE_OFFSET, HALF_TILE_OFFSET));
-		for (int x = radius; x >= -radius; x -= sampleRate) { boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + x, center.getY() + radius, center.getPlane()), 0, HALF_TILE_OFFSET)); }
+		for (int x = radius; x >= -radius; x -= sampleRate) boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() + x, center.getY() + radius, center.getPlane()), 0, HALF_TILE_OFFSET));
 		boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() - radius, center.getY() + radius, center.getPlane()), -HALF_TILE_OFFSET, HALF_TILE_OFFSET));
-		for (int y = radius; y >= -radius; y -= sampleRate) { boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() - radius, center.getY() + y, center.getPlane()), -HALF_TILE_OFFSET, 0)); }
+		for (int y = radius; y >= -radius; y -= sampleRate) boundaryPoints.add(getMinimapPointWithOffset(new WorldPoint(center.getX() - radius, center.getY() + y, center.getPlane()), -HALF_TILE_OFFSET, 0));
 		return boundaryPoints;
 	}
 	private Point getMinimapPointWithOffset(WorldPoint worldPoint, int xOffset, int yOffset) {
 		LocalPoint lp = LocalPoint.fromWorld(client.getTopLevelWorldView(), worldPoint);
 		if (lp == null) return null;
-		LocalPoint offsetLp = new LocalPoint(lp.getX() + xOffset, lp.getY() + yOffset, client.getTopLevelWorldView());
-		return Perspective.localToMinimap(client, offsetLp);
+		return Perspective.localToMinimap(client, new LocalPoint(lp.getX() + xOffset, lp.getY() + yOffset, client.getTopLevelWorldView()));
 	}
 	private GeneralPath createFullMinimapCoveragePath(Rectangle minimapBounds) {
 		GeneralPath fullPath = new GeneralPath();
@@ -218,11 +185,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			double angle = 2 * Math.PI * i / numSegments;
 			double x = centerX + radius * Math.cos(angle);
 			double y = centerY + radius * Math.sin(angle);
-			if (i == 0) {
-				fullPath.moveTo(x, y);
-			} else {
-				fullPath.lineTo(x, y);
-			}
+			if (i == 0) fullPath.moveTo(x, y);
+			else fullPath.lineTo(x, y);
 		}
 		fullPath.closePath();
 		return fullPath;

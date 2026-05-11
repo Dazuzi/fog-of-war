@@ -1,7 +1,5 @@
 package com.fogofwar;
-
 import net.runelite.client.config.*;
-
 import java.awt.*;
 @ConfigGroup("entityrenderdistance")
 public interface FogOfWarConfig extends Config {

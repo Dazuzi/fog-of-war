@@ -25,47 +25,28 @@ public class DynamicRenderDistance {
 		this.eventBus = eventBus;
 		this.currentRenderDistance = config.renderDistanceRadius();
 	}
-	public void start() {
-		eventBus.register(this);
-	}
-	public void stop() {
-		eventBus.unregister(this);
-	}
+	public void start() { eventBus.register(this); }
+	public void stop() { eventBus.unregister(this); }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
-		if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null) {
-			this.currentRenderDistance = config.renderDistanceRadius();
-			return;
-		}
-		if (!config.enableDynamicRenderDistance()) {
-			this.currentRenderDistance = config.renderDistanceRadius();
+		int maxRadius = config.renderDistanceRadius();
+		if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !config.enableDynamicRenderDistance()) {
+			this.currentRenderDistance = maxRadius;
 			return;
 		}
 		WorldView worldView = client.getTopLevelWorldView();
-		int count = 0;
-		for (Player p : worldView.players()) { if (p != null) count++; }
-		if (count >= config.dynamicRenderDistancePlayerThreshold()) {
-			int maxDistTiles = 0;
-			WorldPoint playerWorldPoint = client.getLocalPlayer().getWorldLocation();
-			int playerTileX = playerWorldPoint.getX();
-			int playerTileY = playerWorldPoint.getY();
-			for (Player p : worldView.players()) {
-				if (p == null) continue;
-				WorldPoint wp = p.getWorldLocation();
-				if (wp == null) continue;
-				int distTiles = Math.max(Math.abs(wp.getX() - playerTileX), Math.abs(wp.getY() - playerTileY));
-				if (distTiles > maxDistTiles) {
-					maxDistTiles = distTiles;
-					if (maxDistTiles >= config.renderDistanceRadius()) {
-						maxDistTiles = config.renderDistanceRadius();
-						break;
-					}
-				}
-			}
-			this.currentRenderDistance = maxDistTiles;
-		} else {
-			this.currentRenderDistance = config.renderDistanceRadius();
+		WorldPoint playerWp = client.getLocalPlayer().getWorldLocation();
+		int px = playerWp.getX(), py = playerWp.getY();
+		int count = 0, maxDist = 0;
+		for (Player p : worldView.players()) {
+			if (p == null) continue;
+			count++;
+			WorldPoint wp = p.getWorldLocation();
+			if (wp == null) continue;
+			int dist = Math.max(Math.abs(wp.getX() - px), Math.abs(wp.getY() - py));
+			if (dist > maxDist) maxDist = Math.min(dist, maxRadius);
 		}
+		this.currentRenderDistance = count >= config.dynamicRenderDistancePlayerThreshold() ? maxDist : maxRadius;
 	}
 }

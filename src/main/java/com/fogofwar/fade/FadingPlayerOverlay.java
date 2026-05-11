@@ -1,5 +1,4 @@
 package com.fogofwar.fade;
-
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.ClientState;
 import net.runelite.api.Client;
@@ -12,7 +11,6 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
-
 import javax.inject.Inject;
 import java.awt.*;
 public class FadingPlayerOverlay extends Overlay {
@@ -32,11 +30,8 @@ public class FadingPlayerOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.enableFadingPlayers() || !config.showFadingInWorld() || clientState.isClientNotReady()) return null;
-		if (config.onlyInWilderness() && clientState.isNotInWilderness()) return null;
-		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) {
-			renderFadingPlayer(graphics, fadingPlayer);
-		}
+		if (!config.enableFadingPlayers() || !config.showFadingInWorld() || clientState.isSuppressed(config)) return null;
+		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, fadingPlayer);
 		return null;
 	}
 	private void renderFadingPlayer(Graphics2D graphics, FadingPlayer fadingPlayer) {
@@ -46,17 +41,9 @@ public class FadingPlayerOverlay extends Overlay {
 		if (lp == null) return;
 		Polygon poly = Perspective.getCanvasTilePoly(client, lp);
 		if (poly == null) return;
-		float fadeDuration = Math.max(1, config.fadeDuration());
-		float remainingTicks = fadeDuration - fadingPlayer.getTicksSinceDisappeared();
-		float opacity = remainingTicks / fadeDuration;
-		if (opacity <= 0) return;
+		float opacity = fadingPlayer.getOpacity(config);
 		Color base = config.fadeColor();
-		Color color = new Color(
-				base.getRed() / 255f,
-				base.getGreen() / 255f,
-				base.getBlue() / 255f,
-				(base.getAlpha() / 255f) * opacity
-		);
+		Color color = new Color(base.getRed() / 255f, base.getGreen() / 255f, base.getBlue() / 255f, (base.getAlpha() / 255f) * opacity);
 		graphics.setColor(color);
 		graphics.fill(poly);
 		if (config.showFadeNames()) {

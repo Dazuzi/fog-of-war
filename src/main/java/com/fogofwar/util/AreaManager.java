@@ -1,5 +1,4 @@
 package com.fogofwar.util;
-
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -7,12 +6,10 @@ import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
-
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.List;
-
 @Singleton
 public class AreaManager {
 	private final Client client;

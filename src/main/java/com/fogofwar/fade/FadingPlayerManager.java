@@ -28,6 +28,8 @@ public class FadingPlayerManager {
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
 	private final Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
 	private final Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
+	private final Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
+	private final Set<String> currentPlayerNames = new HashSet<>();
 	@Inject
 	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
 		this.client = client;
@@ -36,9 +38,7 @@ public class FadingPlayerManager {
 		this.dynamicRenderDistance = dynamicRenderDistance;
 		this.areaManager = areaManager;
 	}
-	public void start() {
-		eventBus.register(this);
-	}
+	public void start() { eventBus.register(this); }
 	public void stop() {
 		eventBus.unregister(this);
 		clearAllTracking();
@@ -59,35 +59,43 @@ public class FadingPlayerManager {
 			clearAllTracking();
 			return;
 		}
-		if (config.enableFadingPlayers()) {
-			handleFadingPlayers();
-			updatePlayerTracking();
-		} else {
+		if (!config.enableFadingPlayers()) {
 			clearAllTracking();
+			return;
 		}
+		int renderDistance = dynamicRenderDistance.getCurrentRenderDistance();
+		int fadeDuration = config.fadeDuration();
+		boolean extrapolate = config.extrapolateMovement();
+		boolean onlyAtLimit = config.onlyFadeAtRenderLimit();
+		handleFadingPlayers(fadeDuration, extrapolate, renderDistance);
+		updatePlayerTracking(extrapolate, onlyAtLimit, renderDistance);
 	}
 	private void clearAllTracking() {
 		fadingPlayers.clear();
 		lastTickPlayerLocations.clear();
 		twoTicksAgoPlayerLocations.clear();
+		currentPlayerLocations.clear();
+		currentPlayerNames.clear();
 	}
-	private void handleFadingPlayers() {
+	private void handleFadingPlayers(int fadeDuration, boolean extrapolate, int renderDistance) {
 		fadingPlayers.entrySet().removeIf(entry -> {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
-			if (fp.getTicksSinceDisappeared() > config.fadeDuration()) return true;
+			if (fp.getTicksSinceDisappeared() > fadeDuration) return true;
 			WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
-			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= dynamicRenderDistance.getCurrentRenderDistance()) return true;
-			if (config.extrapolateMovement()) {
-				WorldPoint nextPos = new WorldPoint(fp.getLastLocation().getX() + fp.getVelocity().getX(), fp.getLastLocation().getY() + fp.getVelocity().getY(), fp.getLastLocation().getPlane());
-				fp.setLastLocation(nextPos);
+			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= renderDistance) return true;
+			if (extrapolate) {
+				fp.setLastLocation(new WorldPoint(
+						fp.getLastLocation().getX() + fp.getVelocity().getX(),
+						fp.getLastLocation().getY() + fp.getVelocity().getY(),
+						fp.getLastLocation().getPlane()));
 			}
 			return false;
 		});
 	}
-	private void updatePlayerTracking() {
-		Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
-		Set<String> currentPlayerNames = new HashSet<>();
+	private void updatePlayerTracking(boolean extrapolate, boolean onlyAtLimit, int renderDistance) {
+		currentPlayerLocations.clear();
+		currentPlayerNames.clear();
 		for (Player player : client.getTopLevelWorldView().players()) {
 			if (player != null && player != client.getLocalPlayer()) {
 				currentPlayerLocations.put(player, player.getWorldLocation());
@@ -105,14 +113,13 @@ public class FadingPlayerManager {
 			WorldPoint velocity = (twoTicksAgoLocation != null)
 					? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
 					: new WorldPoint(0, 0, 0);
-			int renderDistance = dynamicRenderDistance.getCurrentRenderDistance();
 			int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
 			int distanceFromPlayer = lastLocation.distanceTo(currentLocalPlayerLocation);
 			boolean isAtRenderLimit = distanceFromPlayer >= renderDistance - 1;
 			boolean isRunningNearLimit = distanceFromPlayer >= renderDistance - 2 && velocityMagnitude >= 2;
-			if (config.onlyFadeAtRenderLimit() && !isAtRenderLimit && !isRunningNearLimit) continue;
+			if (onlyAtLimit && !isAtRenderLimit && !isRunningNearLimit) continue;
 			WorldPoint initialFadeLocation;
-			if (config.extrapolateMovement()) {
+			if (extrapolate) {
 				int dx = lastLocation.getX() - currentLocalPlayerLocation.getX();
 				int dy = lastLocation.getY() - currentLocalPlayerLocation.getY();
 				boolean onXEdge = Math.abs(dx) >= renderDistance - 1;

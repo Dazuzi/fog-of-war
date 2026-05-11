@@ -32,11 +32,19 @@ public class FogOfWarWorldOverlay extends Overlay {
 		setPriority(Overlay.PRIORITY_LOW);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
+
+	// REMOVE
+	private long sampleStart = System.nanoTime();
+	private long accumulatedTimeNs = 0;
+	private int frameCount = 0;
+
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (areaManager.isPlayerInExcludedArea() || clientState.isClientNotReady() || (config.onlyInWilderness() && clientState.isNotInWilderness())) {
-			return null;
-		}
+
+		// REMOVE
+		long start = System.nanoTime();
+
+		if (clientState.isSuppressed(config, areaManager)) return null;
 		int radius = dynamicRenderDistance.getCurrentRenderDistance();
 		WorldPoint playerLocation = client.getLocalPlayer().getWorldLocation();
 		GeneralPath renderAreaBoundary = createRenderAreaBoundary(playerLocation, radius);
@@ -50,6 +58,15 @@ public class FogOfWarWorldOverlay extends Overlay {
 		}
 		if (config.showWorldFog()) renderWorldFog(graphics, renderAreaBoundary);
 		if (config.showWorldBorder()) renderWorldBorder(graphics, renderAreaBoundary);
+
+		// REMOVE
+		long elapsed = System.nanoTime() - start;accumulatedTimeNs += elapsed;frameCount++;long now = System.nanoTime();
+		if (now - sampleStart >= 1_000_000_000L) {
+			double averageMs = (accumulatedTimeNs / (double) frameCount) / 1_000_000.0;
+			System.out.printf("Average execution over %d frames: %.3f ms%n", frameCount, averageMs);
+			sampleStart = now;accumulatedTimeNs = 0;frameCount = 0;
+		}
+
 		return null;
 	}
 	private void subtractEntitiesFromFog(Area fogArea) {
@@ -66,12 +83,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 		}
 	}
 	private void renderWorldFog(Graphics2D graphics, GeneralPath renderAreaBoundary) {
-		Rectangle viewport = new Rectangle(
-				client.getViewportXOffset(),
-				client.getViewportYOffset(),
-				client.getViewportWidth(),
-				client.getViewportHeight()
-		);
+		Rectangle viewport = new Rectangle(client.getViewportXOffset(), client.getViewportYOffset(), client.getViewportWidth(), client.getViewportHeight());
 		Area screenArea = new Area(viewport);
 		screenArea.subtract(new Area(renderAreaBoundary));
 		if (config.excludeEntities()) subtractEntitiesFromFog(screenArea);
@@ -91,10 +103,10 @@ public class FogOfWarWorldOverlay extends Overlay {
 		int plane = centerWp.getPlane();
 		int sampleCount = Math.max(1, radius / 4) * 4;
 		int step = (localRadius * 2) / sampleCount;
-		for (int i = 0; i < sampleCount; i++) { addPoint(boundaryPoints, centerLp.getX() - localRadius + (i * step), centerLp.getY() + localRadius, plane); }
-		for (int i = 0; i < sampleCount; i++) { addPoint(boundaryPoints, centerLp.getX() + localRadius, centerLp.getY() + localRadius - (i * step), plane); }
-		for (int i = 0; i < sampleCount; i++) { addPoint(boundaryPoints, centerLp.getX() + localRadius - (i * step), centerLp.getY() - localRadius, plane); }
-		for (int i = 0; i < sampleCount; i++) { addPoint(boundaryPoints, centerLp.getX() - localRadius, centerLp.getY() - localRadius + (i * step), plane); }
+		for (int i = 0; i < sampleCount; i++) addPoint(boundaryPoints, centerLp.getX() - localRadius + (i * step), centerLp.getY() + localRadius, plane);
+		for (int i = 0; i < sampleCount; i++) addPoint(boundaryPoints, centerLp.getX() + localRadius, centerLp.getY() + localRadius - (i * step), plane);
+		for (int i = 0; i < sampleCount; i++) addPoint(boundaryPoints, centerLp.getX() + localRadius - (i * step), centerLp.getY() - localRadius, plane);
+		for (int i = 0; i < sampleCount; i++) addPoint(boundaryPoints, centerLp.getX() - localRadius, centerLp.getY() - localRadius + (i * step), plane);
 		return createPathFromPoints(boundaryPoints);
 	}
 	private void addPoint(List<net.runelite.api.Point> points, int localX, int localY, int plane) {
@@ -106,9 +118,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 		if (points.isEmpty()) return null;
 		GeneralPath path = new GeneralPath();
 		path.moveTo(points.get(0).getX(), points.get(0).getY());
-		for (int i = 1; i < points.size(); i++) {
-			path.lineTo(points.get(i).getX(), points.get(i).getY());
-		}
+		for (int i = 1; i < points.size(); i++) path.lineTo(points.get(i).getX(), points.get(i).getY());
 		path.closePath();
 		return path;
 	}

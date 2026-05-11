@@ -1,5 +1,4 @@
 package com.fogofwar.fade;
-
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.MinimapUtil;
@@ -13,10 +12,8 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-
 import javax.inject.Inject;
 import java.awt.*;
-
 public class FadingPlayerMinimapOverlay extends Overlay {
 	private static final int DOT_SIZE = 4;
 	private final Client client;
@@ -35,15 +32,12 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.enableFadingPlayers() || !config.showFadingOnMinimap() || clientState.isClientNotReady()) return null;
-		if (config.onlyInWilderness() && clientState.isNotInWilderness()) return null;
+		if (!config.enableFadingPlayers() || !config.showFadingOnMinimap() || clientState.isSuppressed(config)) return null;
 		Widget minimapWidget = MinimapUtil.getMinimapWidget(client);
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapWidget.getBounds());
-		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) {
-			renderFadingPlayer(graphics, fadingPlayer);
-		}
+		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, fadingPlayer);
 		graphics.setClip(oldClip);
 		return null;
 	}
@@ -54,15 +48,9 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		if (lp == null) return;
 		Point mp = Perspective.localToMinimap(client, lp);
 		if (mp == null) return;
-		float fadeDuration = Math.max(1, config.fadeDuration());
-		float remainingTicks = fadeDuration - fadingPlayer.getTicksSinceDisappeared();
-		float opacity = remainingTicks / fadeDuration;
-		Color color = new Color(
-				config.fadeColor().getRed() / 255f,
-				config.fadeColor().getGreen() / 255f,
-				config.fadeColor().getBlue() / 255f,
-				opacity
-		);
+		float opacity = fadingPlayer.getOpacity(config);
+		Color base = config.fadeColor();
+		Color color = new Color(base.getRed() / 255f, base.getGreen() / 255f, base.getBlue() / 255f, opacity);
 		Color shadedColor = color.darker();
 		int x = mp.getX() - DOT_SIZE / 2;
 		int y = mp.getY() - DOT_SIZE / 2 + 1;

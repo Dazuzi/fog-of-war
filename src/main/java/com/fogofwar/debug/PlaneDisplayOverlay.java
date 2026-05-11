@@ -1,5 +1,4 @@
 package com.fogofwar.debug;
-
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.ClientState;
 import net.runelite.api.Client;
@@ -8,7 +7,6 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import javax.inject.Inject;
 import java.awt.*;
-
 public class PlaneDisplayOverlay extends OverlayPanel {
 	private final Client client;
 	private final FogOfWarConfig config;
@@ -26,10 +24,7 @@ public class PlaneDisplayOverlay extends OverlayPanel {
 			return null;
 		}
 		int plane = client.getLocalPlayer().getWorldLocation().getPlane();
-		panelComponent.getChildren().add(LineComponent.builder()
-				.left("Current plane:")
-				.right(String.valueOf(plane))
-				.build());
+		panelComponent.getChildren().add(LineComponent.builder().left("Current plane:").right(String.valueOf(plane)).build());
 		return super.render(graphics);
 	}
 }
