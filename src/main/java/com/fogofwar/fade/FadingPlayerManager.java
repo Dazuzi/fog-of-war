@@ -78,11 +78,11 @@ public class FadingPlayerManager {
 		currentPlayerNames.clear();
 	}
 	private void handleFadingPlayers(int fadeDuration, boolean extrapolate, int renderDistance) {
+		WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
 		fadingPlayers.entrySet().removeIf(entry -> {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
 			if (fp.getTicksSinceDisappeared() > fadeDuration) return true;
-			WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
 			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= renderDistance) return true;
 			if (extrapolate) {
 				fp.setLastLocation(new WorldPoint(
@@ -102,12 +102,12 @@ public class FadingPlayerManager {
 				if (player.getName() != null) currentPlayerNames.add(player.getName());
 			}
 		}
-		Set<Player> disappearedPlayers = new HashSet<>(lastTickPlayerLocations.keySet());
-		disappearedPlayers.removeAll(currentPlayerLocations.keySet());
 		WorldPoint currentLocalPlayerLocation = client.getLocalPlayer().getWorldLocation();
-		for (Player player : disappearedPlayers) {
+		for (Map.Entry<Player, WorldPoint> entry : lastTickPlayerLocations.entrySet()) {
+			Player player = entry.getKey();
+			if (currentPlayerLocations.containsKey(player)) continue;
 			if (fadingPlayers.containsKey(player)) continue;
-			WorldPoint lastLocation = lastTickPlayerLocations.get(player);
+			WorldPoint lastLocation = entry.getValue();
 			if (lastLocation == null) continue;
 			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayerLocations.get(player);
 			WorldPoint velocity = (twoTicksAgoLocation != null)
@@ -133,11 +133,11 @@ public class FadingPlayerManager {
 				} else {
 					initialFadeLocation = predictedNextLocation;
 					if (isAtRenderLimit || isRunningNearLimit) {
-						while (initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= renderDistance) {
-							int pushX = 0, pushY = 0;
-							if (Math.abs(dx) > Math.abs(dy)) pushX = Integer.signum(dx);
-							else if (Math.abs(dy) > Math.abs(dx)) pushY = Integer.signum(dy);
-							else { pushX = Integer.signum(dx); pushY = Integer.signum(dy); }
+						int pushX = 0, pushY = 0;
+						if (Math.abs(dx) > Math.abs(dy)) pushX = Integer.signum(dx);
+						else if (Math.abs(dy) > Math.abs(dx)) pushY = Integer.signum(dy);
+						else { pushX = Integer.signum(dx); pushY = Integer.signum(dy); }
+						while ((pushX != 0 || pushY != 0) && initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= renderDistance) {
 							initialFadeLocation = new WorldPoint(initialFadeLocation.getX() + pushX, initialFadeLocation.getY() + pushY, initialFadeLocation.getPlane());
 						}
 					}

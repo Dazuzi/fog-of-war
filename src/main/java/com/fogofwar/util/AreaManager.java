@@ -8,28 +8,28 @@ import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.ArrayList;
 import java.util.List;
 @Singleton
 public class AreaManager {
+	private static final List<ExcludedArea> EXCLUDED_AREAS = List.of(
+			new ExcludedArea(2367, 5053, 2432, 5119, 0),			// TzHaar Fight Cave
+			new ExcludedArea(2256, 5328, 2286, 5359, 0),			// Inferno
+			new ExcludedArea(3500, 5100, 4000, 5440, 0, 1),		// Tombs of Amascut
+			new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2),	// Theatre of Blood
+			new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 1
+			new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 2
+			new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2),	// Hallowed Sepulchre Floors 3-5
+			new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2),	// Chambers of Xeric
+			new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2)	// Chambers of Xeric
+	);
 	private final Client client;
 	private final EventBus eventBus;
-	private final List<ExcludedArea> excludedAreas = new ArrayList<>();
 	@Getter
 	private boolean playerInExcludedArea = false;
 	@Inject
 	public AreaManager(Client client, EventBus eventBus) {
 		this.client = client;
 		this.eventBus = eventBus;
-		excludedAreas.add(new ExcludedArea(2367, 5053, 2432, 5119, 0));			// TzHaar Fight Cave
-		excludedAreas.add(new ExcludedArea(2256, 5328, 2286, 5359, 0));			// Inferno
-		excludedAreas.add(new ExcludedArea(3500, 5100, 4000, 5440, 0, 1));		// Tombs of Amascut
-		excludedAreas.add(new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2));	// Theatre of Blood
-		excludedAreas.add(new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2));	// Hallowed Sepulchre Floor 1
-		excludedAreas.add(new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2));	// Hallowed Sepulchre Floor 2
-		excludedAreas.add(new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2));	// Hallowed Sepulchre Floors 3-5
-		excludedAreas.add(new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2));	// Chambers of Xeric
-		excludedAreas.add(new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2));	// Chambers of Xeric
 	}
 	public void start() {
 		eventBus.register(this);
@@ -55,7 +55,7 @@ public class AreaManager {
 			return;
 		}
 		WorldPoint playerPoint = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation());
-		for (ExcludedArea area : excludedAreas) {
+		for (ExcludedArea area : EXCLUDED_AREAS) {
 			if (area.contains(playerPoint)) {
 				playerInExcludedArea = true;
 				return;

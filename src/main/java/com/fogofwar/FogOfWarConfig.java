@@ -40,7 +40,7 @@ public interface FogOfWarConfig extends Config {
 			section = worldSection,
 			position = 2
 	)
-	default boolean excludeEntities() { return true; }
+	default boolean excludeEntities() { return false; }
 	@ConfigItem(
 			keyName = "showWorldBorder",
 			name = "Show border",

@@ -47,6 +47,6 @@ public class DynamicRenderDistance {
 			int dist = Math.max(Math.abs(wp.getX() - px), Math.abs(wp.getY() - py));
 			if (dist > maxDist) maxDist = Math.min(dist, maxRadius);
 		}
-		this.currentRenderDistance = count >= config.dynamicRenderDistancePlayerThreshold() ? maxDist : maxRadius;
+		this.currentRenderDistance = count >= config.dynamicRenderDistancePlayerThreshold() ? Math.max(1, maxDist) : maxRadius;
 	}
 }
