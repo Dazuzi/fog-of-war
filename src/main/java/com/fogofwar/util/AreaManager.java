@@ -26,28 +26,29 @@ public class AreaManager {
 	private final EventBus eventBus;
 	@Getter
 	private boolean playerInExcludedArea = false;
+	private boolean started;
 	@Inject
 	public AreaManager(Client client, EventBus eventBus) {
 		this.client = client;
 		this.eventBus = eventBus;
 	}
 	public void start() {
+		if (started) return;
 		eventBus.register(this);
-		if (client.getGameState() == GameState.LOGGED_IN) {
-			checkArea();
-		}
+		started = true;
+		if (client.getGameState() == GameState.LOGGED_IN) checkArea();
 	}
 	public void stop() {
+		if (!started) return;
 		eventBus.unregister(this);
+		started = false;
+		playerInExcludedArea = false;
 	}
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameStateChanged(GameStateChanged event) {
-		if (event.getGameState() == GameState.LOGGED_IN) {
-			checkArea();
-		} else if (event.getGameState() == GameState.LOADING) {
-			playerInExcludedArea = false;
-		}
+		if (event.getGameState() == GameState.LOGGED_IN) checkArea();
+		else if (event.getGameState() == GameState.LOADING) playerInExcludedArea = false;
 	}
 	private void checkArea() {
 		if (client.getLocalPlayer() == null) {

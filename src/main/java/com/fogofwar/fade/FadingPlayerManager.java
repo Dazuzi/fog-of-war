@@ -30,6 +30,7 @@ public class FadingPlayerManager {
 	private final Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
 	private final Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
 	private final Set<String> currentPlayerNames = new HashSet<>();
+	private boolean started;
 	@Inject
 	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
 		this.client = client;
@@ -38,9 +39,16 @@ public class FadingPlayerManager {
 		this.dynamicRenderDistance = dynamicRenderDistance;
 		this.areaManager = areaManager;
 	}
-	public void start() { eventBus.register(this); }
+	public void start() {
+		if (started) return;
+		eventBus.register(this);
+		started = true;
+	}
 	public void stop() {
-		eventBus.unregister(this);
+		if (started) {
+			eventBus.unregister(this);
+			started = false;
+		}
 		clearAllTracking();
 	}
 	@Subscribe

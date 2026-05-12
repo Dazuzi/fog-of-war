@@ -18,6 +18,7 @@ public class DynamicRenderDistance {
 	private final EventBus eventBus;
 	@Getter
 	private int currentRenderDistance;
+	private boolean started;
 	@Inject
 	public DynamicRenderDistance(Client client, FogOfWarConfig config, EventBus eventBus) {
 		this.client = client;
@@ -25,8 +26,18 @@ public class DynamicRenderDistance {
 		this.eventBus = eventBus;
 		this.currentRenderDistance = config.renderDistanceRadius();
 	}
-	public void start() { eventBus.register(this); }
-	public void stop() { eventBus.unregister(this); }
+	public void start() {
+		if (started) return;
+		eventBus.register(this);
+		started = true;
+	}
+	public void stop() {
+		if (started) {
+			eventBus.unregister(this);
+			started = false;
+		}
+		currentRenderDistance = config.renderDistanceRadius();
+	}
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
