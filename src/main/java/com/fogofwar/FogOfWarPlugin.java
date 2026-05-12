@@ -7,8 +7,11 @@ import com.fogofwar.fade.FadingPlayerMinimapOverlay;
 import com.fogofwar.fade.FadingPlayerOverlay;
 import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.DynamicRenderDistance;
+import com.fogofwar.util.VisibleActorTracker;
 import com.google.inject.Provides;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -19,6 +22,11 @@ import javax.inject.Inject;
 		configName = "EntityRenderDistancePlugin"
 )
 public class FogOfWarPlugin extends Plugin {
+	private static final String CONFIG_GROUP = "entityrenderdistance";
+	private static final String EXCLUDE_ENTITIES_KEY = "excludeEntities";
+	@Inject
+	@SuppressWarnings("unused")
+	private FogOfWarConfig config;
 	@Inject
 	@SuppressWarnings("unused")
 	private OverlayManager overlayManager;
@@ -45,6 +53,9 @@ public class FogOfWarPlugin extends Plugin {
 	private AreaManager areaManager;
 	@Inject
 	@SuppressWarnings("unused")
+	private VisibleActorTracker visibleActorTracker;
+	@Inject
+	@SuppressWarnings("unused")
 	private PlaneDisplayOverlay planeDisplayOverlay;
 	@Override
 	protected void startUp() {
@@ -56,6 +67,7 @@ public class FogOfWarPlugin extends Plugin {
 		fadingPlayerManager.start();
 		dynamicRenderDistance.start();
 		areaManager.start();
+		updateVisibleActorTracker();
 	}
 	@Override
 	protected void shutDown() {
@@ -67,6 +79,17 @@ public class FogOfWarPlugin extends Plugin {
 		fadingPlayerManager.stop();
 		dynamicRenderDistance.stop();
 		areaManager.stop();
+		visibleActorTracker.stop();
+	}
+	@Subscribe
+	@SuppressWarnings("unused")
+	public void onConfigChanged(ConfigChanged event) {
+		if (!CONFIG_GROUP.equals(event.getGroup()) || !EXCLUDE_ENTITIES_KEY.equals(event.getKey())) return;
+		updateVisibleActorTracker();
+	}
+	private void updateVisibleActorTracker() {
+		if (config.excludeEntities()) visibleActorTracker.start();
+		else visibleActorTracker.stop();
 	}
 	@Provides
 	@SuppressWarnings("unused")

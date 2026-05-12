@@ -3,9 +3,9 @@ import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.DynamicRenderDistance;
+import com.fogofwar.util.VisibleActorTracker;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
-import net.runelite.api.NPC;
 import net.runelite.api.Perspective;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
@@ -34,6 +34,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private final ClientState clientState;
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
+	private final VisibleActorTracker visibleActorTracker;
 	private final Rectangle viewport = new Rectangle();
 	private final List<Point> boundaryPoints = new ArrayList<>(256);
 	private final GeneralPath renderAreaBoundary = new GeneralPath();
@@ -41,12 +42,13 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private BasicStroke borderStroke;
 	private int borderStrokeWidth = -1;
 	@Inject
-	public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
+	public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager, VisibleActorTracker visibleActorTracker) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.dynamicRenderDistance = dynamicRenderDistance;
 		this.areaManager = areaManager;
+		this.visibleActorTracker = visibleActorTracker;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_LOW);
 		setLayer(OverlayLayer.ABOVE_SCENE);
@@ -88,9 +90,20 @@ public class FogOfWarWorldOverlay extends Overlay {
 			graphics.fill(fogPath);
 			return;
 		}
-		Area fogArea = new Area(fogPath);
-		subtractEntitiesFromFog(fogArea, worldView);
-		graphics.fill(fogArea);
+		Area fogArea = null;
+		for (Actor actor : visibleActorTracker.getVisibleActors()) fogArea = subtractVisibleActorFromFog(fogArea, boundary, worldView, actor);
+		graphics.fill(fogArea != null ? fogArea : fogPath);
+	}
+	private Area subtractVisibleActorFromFog(Area fogArea, GeneralPath boundary, WorldView worldView, Actor actor) {
+		if (actor == null) return fogArea;
+		if (actor.getWorldView() != worldView) return fogArea;
+		Shape hull = actor.getConvexHull();
+		if (hull == null) return fogArea;
+		Rectangle bounds = hull.getBounds();
+		if (!viewport.intersects(bounds) || boundary.contains(bounds)) return fogArea;
+		if (fogArea == null) fogArea = new Area(fogPath);
+		fogArea.subtract(new Area(hull));
+		return fogArea;
 	}
 	private void createFogPath(GeneralPath boundary) {
 		fogPath.reset();
@@ -100,18 +113,6 @@ public class FogOfWarWorldOverlay extends Overlay {
 		fogPath.lineTo(viewport.x, viewport.y + viewport.height);
 		fogPath.closePath();
 		fogPath.append(boundary, false);
-	}
-	private void subtractEntitiesFromFog(Area fogArea, WorldView worldView) {
-		for (Player player : worldView.players()) subtractActorFromFog(fogArea, player);
-		for (NPC npc : worldView.npcs()) subtractActorFromFog(fogArea, npc);
-	}
-	private void subtractActorFromFog(Area fogArea, Actor actor) {
-		if (actor == null) return;
-		Shape convexHull = actor.getConvexHull();
-		if (convexHull == null) return;
-		Rectangle bounds = convexHull.getBounds();
-		if (!viewport.intersects(bounds) || !fogArea.intersects(bounds)) return;
-		fogArea.subtract(new Area(convexHull));
 	}
 	private void renderWorldBorder(Graphics2D graphics, GeneralPath boundary) {
 		Stroke oldStroke = graphics.getStroke();

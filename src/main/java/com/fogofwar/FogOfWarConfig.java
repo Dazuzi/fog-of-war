@@ -36,7 +36,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigItem(
 			keyName = "excludeEntities",
 			name = "Exclude Entities from Fog",
-			description = "Prevents the fog from drawing on top of players and NPCs. May impact performance in crowded areas.",
+			description = "Prevents the fog from drawing on top of players and NPCs. Major negative performance impact in crowded areas.",
 			section = worldSection,
 			position = 2
 	)
@@ -220,7 +220,7 @@ public interface FogOfWarConfig extends Config {
 			section = tweaksSection,
 			position = 2
 	)
-	default int dynamicRenderDistancePlayerThreshold() { return 100; }
+	default int dynamicRenderDistancePlayerThreshold() { return 150; }
 	@ConfigItem(
 			keyName = "showPlaneDisplay",
 			name = "Show Plane Display",
