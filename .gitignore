@@ -1,9 +1,5 @@
-.gradle
-build
+.git/
+.gradle/
 .idea/
-.project
-.settings/
-.classpath
-nbactions.xml
-nb-configuration.xml
-nbproject/
+.run/
+build/

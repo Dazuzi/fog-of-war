@@ -223,10 +223,10 @@ public interface FogOfWarConfig extends Config {
 	default int dynamicRenderDistancePlayerThreshold() { return 150; }
 	@ConfigItem(
 			keyName = "showPlaneDisplay",
-			name = "Show Plane Display",
-			description = "Shows the player's current plane in an overlay. Useful for debugging.",
+			name = "Show debug overlay",
+			description = "Shows plane, player count, and render distance.",
 			section = tweaksSection,
 			position = 3
 	)
-	default boolean showPlaneDisplay() { return false; }
+	default boolean showDebugOverlay() { return false; }
 }

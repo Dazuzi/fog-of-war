@@ -1,7 +1,7 @@
 package com.fogofwar;
 import com.fogofwar.box.FogOfWarMinimapOverlay;
 import com.fogofwar.box.FogOfWarWorldOverlay;
-import com.fogofwar.debug.PlaneDisplayOverlay;
+import com.fogofwar.debug.DebugOverlay;
 import com.fogofwar.fade.FadingPlayerManager;
 import com.fogofwar.fade.FadingPlayerMinimapOverlay;
 import com.fogofwar.fade.FadingPlayerOverlay;
@@ -63,10 +63,10 @@ public class FogOfWarPlugin extends Plugin {
 	private VisibleActorTracker visibleActorTracker;
 	@Inject
 	@SuppressWarnings("unused")
-	private PlaneDisplayOverlay planeDisplayOverlay;
+	private DebugOverlay debugOverlay;
 	private boolean worldOverlayEnabled;
 	private boolean minimapOverlayEnabled;
-	private boolean planeDisplayOverlayEnabled;
+	private boolean debugOverlayEnabled;
 	private boolean fadingPlayerOverlayEnabled;
 	private boolean fadingPlayerMinimapOverlayEnabled;
 	@Override
@@ -75,7 +75,7 @@ public class FogOfWarPlugin extends Plugin {
 	protected void shutDown() {
 		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, false);
 		minimapOverlayEnabled = setOverlayEnabled(minimapOverlay, minimapOverlayEnabled, false);
-		planeDisplayOverlayEnabled = setOverlayEnabled(planeDisplayOverlay, planeDisplayOverlayEnabled, false);
+		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, false);
 		fadingPlayerOverlayEnabled = setOverlayEnabled(fadingPlayerOverlay, fadingPlayerOverlayEnabled, false);
 		fadingPlayerMinimapOverlayEnabled = setOverlayEnabled(fadingPlayerMinimapOverlay, fadingPlayerMinimapOverlayEnabled, false);
 		fadingPlayerManager.stop();
@@ -108,7 +108,7 @@ public class FogOfWarPlugin extends Plugin {
 		boolean renderDistanceActive = worldActive || minimapActive || fadingActive;
 		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, worldActive);
 		minimapOverlayEnabled = setOverlayEnabled(minimapOverlay, minimapOverlayEnabled, minimapActive);
-		planeDisplayOverlayEnabled = setOverlayEnabled(planeDisplayOverlay, planeDisplayOverlayEnabled, config.showPlaneDisplay());
+		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, config.showDebugOverlay());
 		fadingPlayerOverlayEnabled = setOverlayEnabled(fadingPlayerOverlay, fadingPlayerOverlayEnabled, fadingWorldActive);
 		fadingPlayerMinimapOverlayEnabled = setOverlayEnabled(fadingPlayerMinimapOverlay, fadingPlayerMinimapOverlayEnabled, fadingMinimapActive);
 		if (worldActive || minimapActive || fadingActive) areaManager.start();
