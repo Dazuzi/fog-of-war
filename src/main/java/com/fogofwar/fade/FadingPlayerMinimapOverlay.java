@@ -48,9 +48,7 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		if (lp == null) return;
 		Point mp = Perspective.localToMinimap(client, lp);
 		if (mp == null) return;
-		float opacity = fadingPlayer.getOpacity(config);
-		Color base = config.fadeColor();
-		Color color = new Color(base.getRed() / 255f, base.getGreen() / 255f, base.getBlue() / 255f, (base.getAlpha() / 255f) * opacity);
+		Color color = fadingPlayer.getColor(config);
 		Color shadedColor = color.darker();
 		int x = mp.getX() - DOT_SIZE / 2;
 		int y = mp.getY() - DOT_SIZE / 2 + 1;

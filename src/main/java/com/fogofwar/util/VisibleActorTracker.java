@@ -3,7 +3,6 @@ import lombok.Getter;
 import net.runelite.api.Actor;
 import net.runelite.api.Renderable;
 import net.runelite.api.events.BeforeRender;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.callback.RenderCallback;
 import net.runelite.client.callback.RenderCallbackManager;
 import net.runelite.client.eventbus.EventBus;
@@ -41,9 +40,6 @@ public class VisibleActorTracker implements RenderCallback {
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onBeforeRender(BeforeRender event) { clear(); }
-	@Subscribe
-	@SuppressWarnings("unused")
-	public void onGameStateChanged(GameStateChanged event) { clear(); }
 	@Override
 	public boolean addEntity(Renderable renderable, boolean ui) {
 		if (!ui && renderable instanceof Actor) visibleActors.add((Actor) renderable);

@@ -25,7 +25,11 @@ import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 public class FogOfWarWorldOverlay extends Overlay {
 	private static final int LOCAL_TILE_SIZE = 128;
 	private static final int HALF_TILE_SIZE = 64;
@@ -53,8 +57,19 @@ public class FogOfWarWorldOverlay extends Overlay {
 		setPriority(Overlay.PRIORITY_LOW);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
+	private static class CachedHull {
+		Shape hull;
+		Area area;
+		Rectangle bounds;
+		int wx, wy, plane, anim, frame, pose, poseFrame;
+	}
+	private final Map<Actor, CachedHull> hullCache = new IdentityHashMap<>();
+	private final Set<Actor> cacheSeen = Collections.newSetFromMap(new IdentityHashMap<>(256));
+	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
+	private boolean cameraStable;
 	@Override
 	public Dimension render(Graphics2D graphics) {
+		updateCameraStable();
 		if (clientState.isSuppressed(config, areaManager)) return null;
 		boolean showFog = config.showWorldFog();
 		boolean showBorder = config.showWorldBorder();
@@ -90,20 +105,69 @@ public class FogOfWarWorldOverlay extends Overlay {
 			graphics.fill(fogPath);
 			return;
 		}
-		Area fogArea = null;
-		for (Actor actor : visibleActorTracker.getVisibleActors()) fogArea = subtractVisibleActorFromFog(fogArea, boundary, worldView, actor);
-		graphics.fill(fogArea != null ? fogArea : fogPath);
+		Area result = buildExclusion(worldView, boundary);
+		if (result == null) {
+			graphics.fill(fogPath);
+			return;
+		}
+		Area fogArea = new Area(fogPath);
+		fogArea.subtract(result);
+		graphics.fill(fogArea);
 	}
-	private Area subtractVisibleActorFromFog(Area fogArea, GeneralPath boundary, WorldView worldView, Actor actor) {
-		if (actor == null) return fogArea;
-		if (actor.getWorldView() != worldView) return fogArea;
-		Shape hull = actor.getConvexHull();
-		if (hull == null) return fogArea;
-		Rectangle bounds = hull.getBounds();
-		if (!viewport.intersects(bounds) || boundary.contains(bounds)) return fogArea;
-		if (fogArea == null) fogArea = new Area(fogPath);
-		fogArea.subtract(new Area(hull));
-		return fogArea;
+	private void updateCameraStable() {
+		int x = client.getCameraX(), y = client.getCameraY(), z = client.getCameraZ();
+		int p = client.getCameraPitch(), w = client.getCameraYaw();
+		cameraStable = x == lastCamX && y == lastCamY && z == lastCamZ && p == lastCamPitch && w == lastCamYaw;
+		lastCamX = x; lastCamY = y; lastCamZ = z; lastCamPitch = p; lastCamYaw = w;
+		cacheSeen.clear();
+	}
+	private Area buildExclusion(WorldView worldView, GeneralPath boundary) {
+		Area result = null;
+		for (Actor actor : visibleActorTracker.getVisibleActors()) {
+			if (actor == null || actor.getWorldView() != worldView) continue;
+			cacheSeen.add(actor);
+			CachedHull cached = hullCache.get(actor);
+			WorldPoint awp = actor.getWorldLocation();
+			int anim = actor.getAnimation(), frame = actor.getAnimationFrame();
+			int pose = actor.getPoseAnimation(), poseFrame = actor.getPoseAnimationFrame();
+			boolean hit = cached != null && cameraStable && awp != null
+					&& cached.wx == awp.getX() && cached.wy == awp.getY() && cached.plane == awp.getPlane()
+					&& cached.anim == anim && cached.frame == frame
+					&& cached.pose == pose && cached.poseFrame == poseFrame;
+			Area entryArea;
+			Rectangle bounds;
+			if (hit) {
+				bounds = cached.bounds;
+				if (!viewport.intersects(bounds)) continue;
+				if (boundary.contains(bounds)) continue;
+				if (cached.area == null) cached.area = new Area(cached.hull);
+			} else {
+				Shape hull = actor.getConvexHull();
+				if (hull == null) {
+					if (cached != null) hullCache.remove(actor);
+					continue;
+				}
+				bounds = hull.getBounds();
+				if (cached == null) {
+					cached = new CachedHull();
+					hullCache.put(actor, cached);
+				}
+				cached.hull = hull;
+				cached.bounds = bounds;
+				cached.area = null;
+				if (awp != null) { cached.wx = awp.getX(); cached.wy = awp.getY(); cached.plane = awp.getPlane(); }
+				cached.anim = anim; cached.frame = frame;
+				cached.pose = pose; cached.poseFrame = poseFrame;
+				if (!viewport.intersects(bounds)) continue;
+				if (boundary.contains(bounds)) continue;
+				cached.area = new Area(hull);
+			}
+			entryArea = cached.area;
+			if (result == null) result = new Area(entryArea);
+			else result.add(entryArea);
+		}
+		hullCache.keySet().retainAll(cacheSeen);
+		return result;
 	}
 	private void createFogPath(GeneralPath boundary) {
 		fogPath.reset();

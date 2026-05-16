@@ -26,9 +26,9 @@ public class FadingPlayerManager {
 	private final AreaManager areaManager;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
-	private final Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
-	private final Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
-	private final Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
+	private Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
+	private Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
+	private Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
 	private final Set<String> currentPlayerNames = new HashSet<>();
 	private boolean started;
 	@Inject
@@ -157,10 +157,10 @@ public class FadingPlayerManager {
 			fp.setLastLocation(initialFadeLocation);
 			fadingPlayers.put(player, fp);
 		}
-		twoTicksAgoPlayerLocations.clear();
-		twoTicksAgoPlayerLocations.putAll(lastTickPlayerLocations);
-		lastTickPlayerLocations.clear();
-		lastTickPlayerLocations.putAll(currentPlayerLocations);
+		Map<Player, WorldPoint> tmp = twoTicksAgoPlayerLocations;
+		twoTicksAgoPlayerLocations = lastTickPlayerLocations;
+		lastTickPlayerLocations = currentPlayerLocations;
+		currentPlayerLocations = tmp;
 		fadingPlayers.entrySet().removeIf(entry -> {
 			String name = entry.getKey().getName();
 			return name != null && currentPlayerNames.contains(name);

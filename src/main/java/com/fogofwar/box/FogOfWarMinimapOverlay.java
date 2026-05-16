@@ -36,8 +36,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	private static final int LOCAL_TILE_SIZE = 128;
 	private static final int HALF_TILE_OFFSET = 64;
 	private static final int[] ORB_CHILD_IDS = {HEALTH_ORB_CHILD_ID, PRAYER_ORB_CHILD_ID, RUN_ORB_CHILD_ID, SPEC_ORB_CHILD_ID};
-	private final List<Point> boundaryPoints = new ArrayList<>(64);
-	private final List<Point> visiblePoints = new ArrayList<>(64);
+	private final List<Point> boundaryPoints = new ArrayList<>(128);
 	private final GeneralPath renderAreaPath = new GeneralPath();
 	private final GeneralPath fullMinimapCoveragePath = new GeneralPath();
 	private BasicStroke borderStroke;
@@ -113,35 +112,36 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		return borderStroke;
 	}
 	private void renderMinimapFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath renderAreaPath) {
-		Area renderArea = new Area(renderAreaPath);
-		if (renderArea.contains(minimapClipShape.getBounds2D())) return;
+		if (renderAreaPath.contains(minimapClipShape.getBounds2D())) return;
 		Area fogArea = new Area(minimapClipShape);
-		fogArea.subtract(renderArea);
+		fogArea.subtract(new Area(renderAreaPath));
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogArea);
 	}
 	private GeneralPath createClippedRenderAreaPath(List<Point> boundaryPoints, Rectangle minimapBounds) {
-		visiblePoints.clear();
+		int n = boundaryPoints.size();
 		int firstVisible = -1;
-		for (int i = 0; i < boundaryPoints.size(); i++) {
-			Point point = boundaryPoints.get(i);
-			if (point != null) {
+		int visibleCount = 0;
+		for (int i = 0; i < n; i++) {
+			if (boundaryPoints.get(i) != null) {
 				if (firstVisible == -1) firstVisible = i;
-				visiblePoints.add(point);
+				visibleCount++;
 			}
 		}
-		if (visiblePoints.isEmpty()) return createFullMinimapCoveragePath(minimapBounds);
+		if (visibleCount == 0) return createFullMinimapCoveragePath(minimapBounds);
 		GeneralPath path = renderAreaPath;
 		path.reset();
-		if (visiblePoints.size() == boundaryPoints.size()) {
-			Point first = visiblePoints.get(0);
+		if (visibleCount == n) {
+			Point first = boundaryPoints.get(0);
 			path.moveTo(first.getX(), first.getY());
-			for (int i = 1; i < visiblePoints.size(); i++) path.lineTo(visiblePoints.get(i).getX(), visiblePoints.get(i).getY());
+			for (int i = 1; i < n; i++) {
+				Point p = boundaryPoints.get(i);
+				path.lineTo(p.getX(), p.getY());
+			}
 			path.closePath();
 			return path;
 		}
 		path.moveTo(boundaryPoints.get(firstVisible).getX(), boundaryPoints.get(firstVisible).getY());
-		int n = boundaryPoints.size();
 		for (int i = 0; i < n; i++) {
 			int currentIndex = (firstVisible + i) % n;
 			int nextIndex = (firstVisible + i + 1) % n;

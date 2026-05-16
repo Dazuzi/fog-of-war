@@ -41,9 +41,7 @@ public class FadingPlayerOverlay extends Overlay {
 		if (lp == null) return;
 		Polygon poly = Perspective.getCanvasTilePoly(client, lp);
 		if (poly == null) return;
-		float opacity = fadingPlayer.getOpacity(config);
-		Color base = config.fadeColor();
-		Color color = new Color(base.getRed() / 255f, base.getGreen() / 255f, base.getBlue() / 255f, (base.getAlpha() / 255f) * opacity);
+		Color color = fadingPlayer.getColor(config);
 		graphics.setColor(color);
 		graphics.fill(poly);
 		if (config.showFadeNames()) {
