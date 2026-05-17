@@ -11,7 +11,6 @@ final class FogOfWarConfigMigration {
 	private static final String[][] DIRECT_KEYS = {
 			{"onlyInWilderness", "onlyInWilderness"},
 			{"worldFogColour", "worldFogColour"},
-			{"excludeEntities", "excludeEntities"},
 			{"worldBorderColour", "worldBorderColour"},
 			{"worldBorderThickness", "worldBorderThickness"},
 			{"minimapFogColour", "minimapFogColour"},
@@ -60,10 +59,12 @@ final class FogOfWarConfigMigration {
 		migratePluginEnabled(configManager);
 		Integer settingsVersion = configManager.getConfiguration(CONFIG_GROUP, SETTINGS_VERSION_KEY, int.class);
 		if (settingsVersion != null && settingsVersion >= SETTINGS_VERSION) {
+			migrateEntityExclusionLimit(configManager);
 			clearOldKeys(configManager);
 			return;
 		}
 		for (String[] pair : DIRECT_KEYS) copy(configManager, pair[0], pair[1]);
+		migrateEntityExclusionLimit(configManager);
 		migrateFogDisplayMode(configManager, "showWorldFog", "showWorldBorder", "worldMode");
 		migrateFogDisplayMode(configManager, "showMinimapFog", "showMinimapBorder", "minimapMode");
 		migrateFadingPlayerMode(configManager);
@@ -72,6 +73,7 @@ final class FogOfWarConfigMigration {
 	}
 	private static void clearOldKeys(ConfigManager configManager) {
 		for (String key : OLD_KEYS) configManager.unsetConfiguration(OLD_CONFIG_GROUP, key);
+		configManager.unsetConfiguration(CONFIG_GROUP, "excludeEntities");
 	}
 	private static void migratePluginEnabled(ConfigManager configManager) {
 		String oldValue = configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, OLD_PLUGIN_KEY);
@@ -92,9 +94,16 @@ final class FogOfWarConfigMigration {
 		if (minimap) return FadingPlayerMode.MINIMAP;
 		return FadingPlayerMode.OFF;
 	}
+	static EntityExclusionLimit toEntityExclusionLimit(boolean enabled) { return enabled ? EntityExclusionLimit.ALL : EntityExclusionLimit.NONE; }
 	private static void copy(ConfigManager configManager, String oldKey, String newKey) {
 		String value = configManager.getConfiguration(OLD_CONFIG_GROUP, oldKey);
 		if (value != null) configManager.setConfiguration(CONFIG_GROUP, newKey, value);
+	}
+	private static void migrateEntityExclusionLimit(ConfigManager configManager) {
+		if (configManager.getConfiguration(CONFIG_GROUP, "entityExclusionLimit") != null) return;
+		Boolean value = configManager.getConfiguration(CONFIG_GROUP, "excludeEntities", boolean.class);
+		if (value == null) value = configManager.getConfiguration(OLD_CONFIG_GROUP, "excludeEntities", boolean.class);
+		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "entityExclusionLimit", toEntityExclusionLimit(value));
 	}
 	private static void migrateFogDisplayMode(ConfigManager configManager, String fogKey, String borderKey, String newKey) {
 		boolean fog = getBoolean(configManager, fogKey, true);

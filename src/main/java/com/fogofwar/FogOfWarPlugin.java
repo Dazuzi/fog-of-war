@@ -128,7 +128,7 @@ public class FogOfWarPlugin extends Plugin {
 		else fadingPlayerManager.stop();
 		if (config.enableDynamicRenderDistance() && renderDistanceActive) dynamicRenderDistance.start();
 		else dynamicRenderDistance.stop();
-		if (worldActive && worldMode.showsFog() && config.excludeEntities()) visibleActorTracker.start();
+		if (worldActive && worldMode.showsFog() && config.entityExclusionLimit().isEnabled()) visibleActorTracker.start();
 		else visibleActorTracker.stop();
 	}
 	private boolean isCurrentAreaEnabled() { return !config.onlyInWilderness() || !clientState.isNotInWilderness(); }

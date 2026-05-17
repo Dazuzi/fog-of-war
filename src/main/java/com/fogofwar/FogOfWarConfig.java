@@ -60,13 +60,13 @@ public interface FogOfWarConfig extends Config {
 	)
 	default int worldBorderThickness() { return 1; }
 	@ConfigItem(
-			keyName = "excludeEntities",
-			name = "Exclude entities from fog",
-			description = "Prevents the fog from drawing on top of players and NPCs. Major negative performance impact in crowded areas.",
+			keyName = "entityExclusionLimit",
+			name = "Entity exclusions",
+			description = "Limits how many visible players and NPCs are excluded from the world fog. Higher values improve coverage but cost more performance.",
 			section = worldSection,
 			position = 4
 	)
-	default boolean excludeEntities() { return false; }
+	default EntityExclusionLimit entityExclusionLimit() { return EntityExclusionLimit.NONE; }
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",

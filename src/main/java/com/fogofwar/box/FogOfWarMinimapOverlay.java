@@ -32,15 +32,18 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
 	private static final int ORB_GROUP_ID = 160;
-	private static final int HEALTH_ORB_CHILD_ID = 7;
-	private static final int PRAYER_ORB_CHILD_ID = 18;
-	private static final int RUN_ORB_CHILD_ID = 26;
-	private static final int SPEC_ORB_CHILD_ID = 34;
+	private static final int HEALTH_ORB_BACKING_CHILD_ID = 8;
+	private static final int PRAYER_ORB_BACKING_CHILD_ID = 19;
+	private static final int RUN_ORB_BACKING_CHILD_ID = 27;
+	private static final int SPEC_ORB_BACKING_CHILD_ID = 35;
 	private static final int WORLD_MAP_ORB_CHILD_ID = 49;
 	private static final int LOCAL_TILE_SIZE = 128;
 	private static final int HALF_TILE_OFFSET = 64;
 	private static final int MINIMAP_PROJECTION_DISTANCE = 32768;
-	private static final int[] ORB_CHILD_IDS = {HEALTH_ORB_CHILD_ID, PRAYER_ORB_CHILD_ID, RUN_ORB_CHILD_ID, SPEC_ORB_CHILD_ID, WORLD_MAP_ORB_CHILD_ID};
+	private static final int MINIMAP_RENDER_AREA_PADDING = 1;
+	private static final int RESIZED_MINIMAP_CLIP_PADDING = 1;
+	private static final int FIXED_MINIMAP_CLIP_PADDING = 3;
+	private static final int[] ORB_CHILD_IDS = {HEALTH_ORB_BACKING_CHILD_ID, PRAYER_ORB_BACKING_CHILD_ID, RUN_ORB_BACKING_CHILD_ID, SPEC_ORB_BACKING_CHILD_ID, WORLD_MAP_ORB_CHILD_ID};
 	private final List<Point> boundaryPoints = new ArrayList<>(128);
 	private final GeneralPath renderAreaPath = new GeneralPath();
 	private final GeneralPath lastRenderAreaPath = new GeneralPath();
@@ -51,6 +54,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	private Rectangle cachedMinimapBounds;
 	private Shape cachedClipShape;
 	private long cachedOrbsHash;
+	private boolean cachedResized;
 	private boolean hasLastRenderAreaPath;
 	@Inject
 	public FogOfWarMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
@@ -102,19 +106,21 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	}
 	private Shape getMinimapClipShape(Widget minimapWidget) {
 		Rectangle bounds = minimapWidget.getBounds();
+		boolean resized = client.isResized();
 		long orbsHash = collectOrbBoundsAndHash();
-		if (cachedClipShape != null && bounds.equals(cachedMinimapBounds) && orbsHash == cachedOrbsHash) return cachedClipShape;
-		Area clipArea = new Area(new Ellipse2D.Double(bounds.getX() - 1, bounds.getY() - 1, bounds.getWidth() + 2, bounds.getHeight() + 2));
+		if (cachedClipShape != null && bounds.equals(cachedMinimapBounds) && orbsHash == cachedOrbsHash && resized == cachedResized) return cachedClipShape;
+		Area clipArea = createEllipse(bounds, resized ? RESIZED_MINIMAP_CLIP_PADDING : FIXED_MINIMAP_CLIP_PADDING);
 		for (Rectangle ob : currentOrbBounds) {
 			if (ob == null) continue;
-			Area orbArea = new Area(new Ellipse2D.Double(ob.getX(), ob.getY(), ob.getWidth(), ob.getHeight()));
-			clipArea.subtract(orbArea);
+			clipArea.subtract(createEllipse(ob, 0));
 		}
 		cachedClipShape = clipArea;
 		cachedMinimapBounds = new Rectangle(bounds);
 		cachedOrbsHash = orbsHash;
+		cachedResized = resized;
 		return cachedClipShape;
 	}
+	private static Area createEllipse(Rectangle bounds, int padding) { return new Area(new Ellipse2D.Double(bounds.getX() - padding, bounds.getY() - padding, bounds.getWidth() + padding * 2, bounds.getHeight() + padding * 2)); }
 	private long collectOrbBoundsAndHash() {
 		long h = 1469598103934665603L;
 		for (int i = 0; i < ORB_CHILD_IDS.length; i++) {
@@ -149,9 +155,9 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		graphics.fill(fogFillPath);
 	}
 	private GeneralPath createClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint) {
-		GeneralPath path = buildClippedRenderAreaPath(points, minimapBounds, false);
+		GeneralPath path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, false);
 		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path);
-		path = buildClippedRenderAreaPath(points, minimapBounds, true);
+		path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, true);
 		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path);
 		return hasLastRenderAreaPath ? lastRenderAreaPath : path;
 	}
@@ -164,7 +170,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		}
 		return path;
 	}
-	private GeneralPath buildClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, boolean reverseArc) {
+	private GeneralPath buildClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, boolean reverseArc) {
 		int n = points.size();
 		int firstVisible = -1;
 		int visibleCount = 0;
@@ -178,16 +184,17 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		GeneralPath path = renderAreaPath;
 		path.reset();
 		if (visibleCount == n) {
-			Point first = points.get(0);
+			Point first = padRenderAreaPoint(points.get(0), minimapBounds, centerPoint);
 			path.moveTo(first.getX(), first.getY());
 			for (int i = 1; i < n; i++) {
-				Point p = points.get(i);
+				Point p = padRenderAreaPoint(points.get(i), minimapBounds, centerPoint);
 				path.lineTo(p.getX(), p.getY());
 			}
 			path.closePath();
 			return path;
 		}
-		path.moveTo(points.get(firstVisible).getX(), points.get(firstVisible).getY());
+		Point first = padRenderAreaPoint(points.get(firstVisible), minimapBounds, centerPoint);
+		path.moveTo(first.getX(), first.getY());
 		for (int i = 0; i < n; i++) {
 			int currentIndex = (firstVisible + i) % n;
 			int nextIndex = (firstVisible + i + 1) % n;
@@ -195,7 +202,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			Point p2 = points.get(nextIndex);
 			if (p1 != null) {
 				if (p2 != null) {
-					path.lineTo(p2.getX(), p2.getY());
+					Point p = padRenderAreaPoint(p2, minimapBounds, centerPoint);
+					path.lineTo(p.getX(), p.getY());
 				} else {
 					int nextVisibleIndex = -1;
 					for (int j = 2; j < n; j++) {
@@ -204,12 +212,21 @@ public class FogOfWarMinimapOverlay extends Overlay {
 							break;
 						}
 					}
-					if (nextVisibleIndex != -1) addArcToPath(path, p1, points.get(nextVisibleIndex), minimapBounds, reverseArc);
+					if (nextVisibleIndex != -1) addArcToPath(path, padRenderAreaPoint(p1, minimapBounds, centerPoint), padRenderAreaPoint(points.get(nextVisibleIndex), minimapBounds, centerPoint), minimapBounds, reverseArc);
 				}
 			}
 		}
 		path.closePath();
 		return path;
+	}
+	private Point padRenderAreaPoint(Point point, Rectangle minimapBounds, Point centerPoint) {
+		double centerX = centerPoint != null ? centerPoint.getX() : minimapBounds.getCenterX();
+		double centerY = centerPoint != null ? centerPoint.getY() : minimapBounds.getCenterY();
+		double dx = point.getX() - centerX;
+		double dy = point.getY() - centerY;
+		double distance = Math.hypot(dx, dy);
+		if (distance == 0) return point;
+		return new Point((int) Math.round(point.getX() + dx * MINIMAP_RENDER_AREA_PADDING / distance), (int) Math.round(point.getY() + dy * MINIMAP_RENDER_AREA_PADDING / distance));
 	}
 	private void addArcToPath(GeneralPath path, Point p1, Point p2, Rectangle minimapBounds, boolean reverse) {
 		double centerX = minimapBounds.getCenterX();
