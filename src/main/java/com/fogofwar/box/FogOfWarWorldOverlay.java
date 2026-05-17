@@ -4,11 +4,13 @@ import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.CachedStroke;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.DynamicRenderDistance;
+import com.fogofwar.util.RenderCenter;
+import com.fogofwar.util.SailingDiagnostics;
 import com.fogofwar.util.VisibleActorTracker;
+import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
-import net.runelite.api.Player;
 import net.runelite.api.Point;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
@@ -30,6 +32,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+@Slf4j
 public class FogOfWarWorldOverlay extends Overlay {
 	private static final int LOCAL_TILE_SIZE = 128;
 	private static final int HALF_TILE_SIZE = 64;
@@ -39,6 +42,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
 	private final VisibleActorTracker visibleActorTracker;
+	private final SailingDiagnostics diagnostics;
 	private final Rectangle viewport = new Rectangle();
 	private final List<Point> boundaryPoints = new ArrayList<>(256);
 	private final GeneralPath renderAreaBoundary = new GeneralPath();
@@ -55,13 +59,14 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
 	private boolean cameraStable;
 	@Inject
-	public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager, VisibleActorTracker visibleActorTracker) {
+	public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager, VisibleActorTracker visibleActorTracker, SailingDiagnostics diagnostics) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.dynamicRenderDistance = dynamicRenderDistance;
 		this.areaManager = areaManager;
 		this.visibleActorTracker = visibleActorTracker;
+		this.diagnostics = diagnostics;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_LOW);
 		setLayer(OverlayLayer.ABOVE_SCENE);
@@ -78,20 +83,19 @@ public class FogOfWarWorldOverlay extends Overlay {
 		boolean showFog = config.showWorldFog();
 		boolean showBorder = config.showWorldBorder();
 		if (!showFog && !showBorder) return null;
-		Player localPlayer = client.getLocalPlayer();
-		if (localPlayer == null) return null;
-		WorldPoint playerLocation = localPlayer.getWorldLocation();
-		if (playerLocation == null) return null;
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null) return null;
-		int radius = dynamicRenderDistance.getCurrentRenderDistance();
-		GeneralPath boundary = createRenderAreaBoundary(worldView, playerLocation, radius);
+		RenderCenter rc = RenderCenter.resolve(client);
+		if (rc == null) return null;
+		diagnostics.observe(client, rc);
+		WorldView worldView = rc.getWorldView();
+		int radius = rc.isOnWorldEntity() ? config.boatRenderDistanceRadius() : dynamicRenderDistance.getCurrentRenderDistance();
+		GeneralPath boundary = createRenderAreaBoundary(worldView, rc.getLocalPoint(), rc.getWorldPoint().getPlane(), radius);
 		setViewportBounds();
 		if (boundary == null) {
 			if (showFog) {
 				graphics.setColor(config.worldFogColour());
 				graphics.fill(viewport);
 			}
+			diagnostics.boundaryNull(rc);
 			return null;
 		}
 		if (showFog) renderWorldFog(graphics, worldView, boundary);
@@ -189,12 +193,10 @@ public class FogOfWarWorldOverlay extends Overlay {
 		graphics.draw(boundary);
 		graphics.setStroke(oldStroke);
 	}
-	private GeneralPath createRenderAreaBoundary(WorldView worldView, WorldPoint centerWp, int radius) {
-		LocalPoint centerLp = LocalPoint.fromWorld(worldView, centerWp);
+	private GeneralPath createRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
 		if (centerLp == null) return null;
 		boundaryPoints.clear();
 		int localRadius = radius * LOCAL_TILE_SIZE + HALF_TILE_SIZE;
-		int plane = centerWp.getPlane();
 		int sampleCount = Math.max(1, radius / 4) * 4;
 		int step = localRadius * 2 / sampleCount;
 		int minX = centerLp.getX() - localRadius;

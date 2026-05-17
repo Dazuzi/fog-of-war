@@ -5,6 +5,7 @@ import com.fogofwar.util.CachedStroke;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.DynamicRenderDistance;
 import com.fogofwar.util.MinimapUtil;
+import com.fogofwar.util.RenderCenter;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -21,6 +22,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 public class FogOfWarMinimapOverlay extends Overlay {
 	private final Client client;
@@ -62,7 +64,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		cachedMinimapBounds = null;
 		cachedClipShape = null;
 		cachedOrbsHash = 0;
-		for (int i = 0; i < currentOrbBounds.length; i++) currentOrbBounds[i] = null;
+		Arrays.fill(currentOrbBounds, null);
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
@@ -72,15 +74,13 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		if (!showFog && !showBorder) return null;
 		Widget minimap = MinimapUtil.getMinimapWidget(client);
 		if (minimap == null || minimap.isHidden()) return null;
-		WorldView worldView = client.getTopLevelWorldView();
-		if (worldView == null) return null;
-		WorldPoint centerWp = client.getLocalPlayer().getWorldLocation();
-		if (centerWp == null) return null;
+		RenderCenter rc = RenderCenter.resolve(client);
+		if (rc == null) return null;
 		Shape minimapClipShape = getMinimapClipShape(minimap);
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapClipShape);
-		int radius = dynamicRenderDistance.getCurrentRenderDistance();
-		List<Point> points = getBoundaryPointsWithNulls(worldView, centerWp, radius);
+		int radius = rc.isOnWorldEntity() ? config.boatRenderDistanceRadius() : dynamicRenderDistance.getCurrentRenderDistance();
+		List<Point> points = getBoundaryPointsWithNulls(rc.getWorldView(), rc.getWorldPoint(), rc.getLocalPoint(), radius);
 		GeneralPath fogPath = createClippedRenderAreaPath(points, minimap.getBounds());
 		if (fogPath == null) {
 			graphics.setClip(oldClip);
@@ -200,9 +200,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			path.lineTo((float) (centerX + radius * Math.cos(currentAngleRad)), (float) (centerY + radius * Math.sin(currentAngleRad)));
 		}
 	}
-	private List<Point> getBoundaryPointsWithNulls(WorldView worldView, WorldPoint center, int radius) {
+	private List<Point> getBoundaryPointsWithNulls(WorldView worldView, WorldPoint center, LocalPoint centerLp, int radius) {
 		boundaryPoints.clear();
-		LocalPoint centerLp = LocalPoint.fromWorld(worldView, center);
 		if (centerLp == null) return boundaryPoints;
 		int sampleRate = Math.max(1, radius / 12);
 		addMinimapPoint(worldView, center, centerLp, -radius, -radius, -HALF_TILE_OFFSET, -HALF_TILE_OFFSET);

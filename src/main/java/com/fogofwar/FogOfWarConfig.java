@@ -204,12 +204,21 @@ public interface FogOfWarConfig extends Config {
 			position = 0
 	)
 	default int renderDistanceRadius() { return 15; }
+	@Range(min = 1, max = 64)
+	@ConfigItem(
+			keyName = "boatRenderDistanceRadius",
+			name = "Boat render distance",
+			description = "Render distance used while sailing, centred on the boat (normally 30).<br>The game uses a separate render distance for sailing entities; this overlay uses this value whenever the player is on a boat/WorldEntity.",
+			section = tweaksSection,
+			position = 1
+	)
+	default int boatRenderDistanceRadius() { return 30; }
 	@ConfigItem(
 			keyName = "enableDynamicRenderDistance",
 			name = "Enable dynamic render distance",
 			description = "(Experimental) Automatically scales the render distance based on player count in high-population areas.",
 			section = tweaksSection,
-			position = 1
+			position = 2
 	)
 	default boolean enableDynamicRenderDistance() { return false; }
 	@Range(min = 1, max = 500)
@@ -218,7 +227,7 @@ public interface FogOfWarConfig extends Config {
 			name = "Player count trigger",
 			description = "(Experimental) The number of players needed to trigger the dynamic render distance check.",
 			section = tweaksSection,
-			position = 2
+			position = 3
 	)
 	default int dynamicRenderDistancePlayerThreshold() { return 150; }
 	@ConfigItem(
@@ -226,7 +235,7 @@ public interface FogOfWarConfig extends Config {
 			name = "Show debug overlay",
 			description = "Shows plane, player count, and render distance.",
 			section = tweaksSection,
-			position = 3
+			position = 4
 	)
 	default boolean showDebugOverlay() { return false; }
 }
