@@ -78,6 +78,8 @@ public class FogOfWarPlugin extends Plugin {
 		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, false);
 		fadingPlayerOverlayEnabled = setOverlayEnabled(fadingPlayerOverlay, fadingPlayerOverlayEnabled, false);
 		fadingPlayerMinimapOverlayEnabled = setOverlayEnabled(fadingPlayerMinimapOverlay, fadingPlayerMinimapOverlayEnabled, false);
+		worldOverlay.clearCaches();
+		minimapOverlay.clearCaches();
 		fadingPlayerManager.stop();
 		dynamicRenderDistance.stop();
 		areaManager.stop();

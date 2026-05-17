@@ -1,6 +1,7 @@
 package com.fogofwar.box;
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.AreaManager;
+import com.fogofwar.util.CachedStroke;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.DynamicRenderDistance;
 import com.fogofwar.util.VisibleActorTracker;
@@ -16,7 +17,6 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import javax.inject.Inject;
-import java.awt.BasicStroke;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -43,8 +43,17 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private final List<Point> boundaryPoints = new ArrayList<>(256);
 	private final GeneralPath renderAreaBoundary = new GeneralPath();
 	private final GeneralPath fogPath = new GeneralPath(GeneralPath.WIND_EVEN_ODD);
-	private BasicStroke borderStroke;
-	private int borderStrokeWidth = -1;
+	private final CachedStroke borderStroke = new CachedStroke();
+	private static class CachedHull {
+		Shape hull;
+		Area area;
+		Rectangle bounds;
+		int wx, wy, plane, anim, frame, pose, poseFrame;
+	}
+	private final Map<Actor, CachedHull> hullCache = new IdentityHashMap<>();
+	private final Set<Actor> cacheSeen = Collections.newSetFromMap(new IdentityHashMap<>(256));
+	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
+	private boolean cameraStable;
 	@Inject
 	public FogOfWarWorldOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager, VisibleActorTracker visibleActorTracker) {
 		this.client = client;
@@ -57,19 +66,14 @@ public class FogOfWarWorldOverlay extends Overlay {
 		setPriority(Overlay.PRIORITY_LOW);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
-	private static class CachedHull {
-		Shape hull;
-		Area area;
-		Rectangle bounds;
-		int wx, wy, plane, anim, frame, pose, poseFrame;
+	public void clearCaches() {
+		hullCache.clear();
+		cacheSeen.clear();
 	}
-	private final Map<Actor, CachedHull> hullCache = new IdentityHashMap<>();
-	private final Set<Actor> cacheSeen = Collections.newSetFromMap(new IdentityHashMap<>(256));
-	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
-	private boolean cameraStable;
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		updateCameraStable();
+		cacheSeen.clear();
 		if (clientState.isSuppressed(config, areaManager)) return null;
 		boolean showFog = config.showWorldFog();
 		boolean showBorder = config.showWorldBorder();
@@ -119,7 +123,6 @@ public class FogOfWarWorldOverlay extends Overlay {
 		int p = client.getCameraPitch(), w = client.getCameraYaw();
 		cameraStable = x == lastCamX && y == lastCamY && z == lastCamZ && p == lastCamPitch && w == lastCamYaw;
 		lastCamX = x; lastCamY = y; lastCamZ = z; lastCamPitch = p; lastCamYaw = w;
-		cacheSeen.clear();
 	}
 	private Area buildExclusion(WorldView worldView, GeneralPath boundary) {
 		Area result = null;
@@ -156,6 +159,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 				cached.bounds = bounds;
 				cached.area = null;
 				if (awp != null) { cached.wx = awp.getX(); cached.wy = awp.getY(); cached.plane = awp.getPlane(); }
+				else { cached.wx = Integer.MIN_VALUE; cached.wy = Integer.MIN_VALUE; cached.plane = Integer.MIN_VALUE; }
 				cached.anim = anim; cached.frame = frame;
 				cached.pose = pose; cached.poseFrame = poseFrame;
 				if (!viewport.intersects(bounds)) continue;
@@ -181,17 +185,9 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private void renderWorldBorder(Graphics2D graphics, GeneralPath boundary) {
 		Stroke oldStroke = graphics.getStroke();
 		graphics.setColor(config.worldBorderColour());
-		graphics.setStroke(getBorderStroke());
+		graphics.setStroke(borderStroke.get(config.worldBorderThickness()));
 		graphics.draw(boundary);
 		graphics.setStroke(oldStroke);
-	}
-	private BasicStroke getBorderStroke() {
-		int width = config.worldBorderThickness();
-		if (borderStroke == null || borderStrokeWidth != width) {
-			borderStroke = new BasicStroke(width);
-			borderStrokeWidth = width;
-		}
-		return borderStroke;
 	}
 	private GeneralPath createRenderAreaBoundary(WorldView worldView, WorldPoint centerWp, int radius) {
 		LocalPoint centerLp = LocalPoint.fromWorld(worldView, centerWp);

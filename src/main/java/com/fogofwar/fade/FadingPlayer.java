@@ -13,10 +13,14 @@ class FadingPlayer {
 	private final WorldPoint velocity;
 	@Setter
 	private int ticksSinceDisappeared = 0;
-	FadingPlayer(Player player, WorldPoint velocity) {
+	private int cachedTick = Integer.MIN_VALUE;
+	private int cachedFadeDuration = Integer.MIN_VALUE;
+	private int cachedBaseRgb;
+	private Color cachedColor;
+	FadingPlayer(Player player, WorldPoint velocity, WorldPoint initialLocation) {
 		this.player = player;
 		this.velocity = velocity;
-		this.lastLocation = player.getWorldLocation();
+		this.lastLocation = initialLocation;
 	}
 	float getOpacity(FogOfWarConfig config) {
 		float d = Math.max(1, config.fadeDuration());
@@ -24,7 +28,14 @@ class FadingPlayer {
 	}
 	Color getColor(FogOfWarConfig config) {
 		Color base = config.fadeColor();
+		int duration = config.fadeDuration();
+		int baseRgb = base.getRGB();
+		if (cachedColor != null && cachedTick == ticksSinceDisappeared && cachedFadeDuration == duration && cachedBaseRgb == baseRgb) return cachedColor;
 		float o = getOpacity(config);
-		return new Color(base.getRed() / 255f, base.getGreen() / 255f, base.getBlue() / 255f, (base.getAlpha() / 255f) * o);
+		cachedColor = new Color(base.getRed() / 255f, base.getGreen() / 255f, base.getBlue() / 255f, (base.getAlpha() / 255f) * o);
+		cachedTick = ticksSinceDisappeared;
+		cachedFadeDuration = duration;
+		cachedBaseRgb = baseRgb;
+		return cachedColor;
 	}
 }

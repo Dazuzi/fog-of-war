@@ -13,37 +13,28 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 @Singleton
-public class VisibleActorTracker implements RenderCallback {
-	private final EventBus eventBus;
+public class VisibleActorTracker extends LifecycleComponent implements RenderCallback {
 	private final RenderCallbackManager renderCallbackManager;
 	@Getter
 	private final Set<Actor> visibleActors = Collections.newSetFromMap(new IdentityHashMap<>(256));
-	private boolean started;
 	@Inject
 	public VisibleActorTracker(EventBus eventBus, RenderCallbackManager renderCallbackManager) {
-		this.eventBus = eventBus;
+		super(eventBus);
 		this.renderCallbackManager = renderCallbackManager;
 	}
-	public void start() {
-		if (started) return;
-		eventBus.register(this);
-		renderCallbackManager.register(this);
-		started = true;
-	}
-	public void stop() {
-		if (!started) return;
-		renderCallbackManager.unregister(this);
-		eventBus.unregister(this);
-		started = false;
-		clear();
+	@Override
+	protected void onStart() { renderCallbackManager.register(this); }
+	@Override
+	protected void onStop(boolean wasStarted) {
+		if (wasStarted) renderCallbackManager.unregister(this);
+		visibleActors.clear();
 	}
 	@Subscribe
 	@SuppressWarnings("unused")
-	public void onBeforeRender(BeforeRender event) { clear(); }
+	public void onBeforeRender(BeforeRender event) { visibleActors.clear(); }
 	@Override
 	public boolean addEntity(Renderable renderable, boolean ui) {
 		if (!ui && renderable instanceof Actor) visibleActors.add((Actor) renderable);
 		return true;
 	}
-	private void clear() { visibleActors.clear(); }
 }

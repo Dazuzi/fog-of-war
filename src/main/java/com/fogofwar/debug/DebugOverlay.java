@@ -2,9 +2,8 @@ package com.fogofwar.debug;
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.ClientState;
 import com.fogofwar.util.DynamicRenderDistance;
+import com.fogofwar.util.Players;
 import net.runelite.api.Client;
-import net.runelite.api.Player;
-import net.runelite.api.WorldView;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.components.LineComponent;
@@ -26,18 +25,10 @@ public class DebugOverlay extends OverlayPanel {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		if (!config.showDebugOverlay() || clientState.isClientNotReady()) return null;
-		WorldView worldView = client.getTopLevelWorldView();
-		int playerCount = countPlayers(worldView);
-		addLine("Current plane:", client.getLocalPlayer().getWorldLocation().getPlane());
-		addLine("Players:", playerCount);
+		addLine("Current plane:", client.getPlane());
+		addLine("Players:", Players.count(client.getTopLevelWorldView()));
 		addLine("Render distance:", dynamicRenderDistance.getCurrentRenderDistance());
 		return super.render(graphics);
-	}
-	private int countPlayers(WorldView worldView) {
-		if (worldView == null) return 0;
-		int count = 0;
-		for (Player player : worldView.players()) if (player != null) count++;
-		return count;
 	}
 	private void addLine(String left, Object right) {
 		panelComponent.getChildren().add(LineComponent.builder().left(left).right(String.valueOf(right)).build());

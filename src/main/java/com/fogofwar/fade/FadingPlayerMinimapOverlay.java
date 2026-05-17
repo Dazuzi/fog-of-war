@@ -37,13 +37,13 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapWidget.getBounds());
-		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, fadingPlayer);
+		WorldView wv = client.getTopLevelWorldView();
+		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, wv, fadingPlayer);
 		graphics.setClip(oldClip);
 		return null;
 	}
-	private void renderFadingPlayer(Graphics2D graphics, FadingPlayer fadingPlayer) {
+	private void renderFadingPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
 		WorldPoint wp = fadingPlayer.getLastLocation();
-		WorldView wv = client.getTopLevelWorldView();
 		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
 		if (lp == null) return;
 		Point mp = Perspective.localToMinimap(client, lp);

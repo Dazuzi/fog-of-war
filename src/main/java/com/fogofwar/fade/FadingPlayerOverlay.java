@@ -31,12 +31,12 @@ public class FadingPlayerOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		if (!config.enableFadingPlayers() || !config.showFadingInWorld() || clientState.isSuppressed(config)) return null;
-		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, fadingPlayer);
+		WorldView wv = client.getTopLevelWorldView();
+		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, wv, fadingPlayer);
 		return null;
 	}
-	private void renderFadingPlayer(Graphics2D graphics, FadingPlayer fadingPlayer) {
+	private void renderFadingPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
 		WorldPoint wp = fadingPlayer.getLastLocation();
-		WorldView wv = client.getTopLevelWorldView();
 		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
 		if (lp == null) return;
 		Polygon poly = Perspective.getCanvasTilePoly(client, lp);

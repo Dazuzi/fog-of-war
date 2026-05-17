@@ -2,6 +2,7 @@ package com.fogofwar.fade;
 import com.fogofwar.FogOfWarConfig;
 import com.fogofwar.util.AreaManager;
 import com.fogofwar.util.DynamicRenderDistance;
+import com.fogofwar.util.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -18,10 +19,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 @Singleton
-public class FadingPlayerManager {
+public class FadingPlayerManager extends LifecycleComponent {
 	private final Client client;
 	private final FogOfWarConfig config;
-	private final EventBus eventBus;
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
 	@Getter
@@ -30,27 +30,16 @@ public class FadingPlayerManager {
 	private Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
 	private Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
 	private final Set<String> currentPlayerNames = new HashSet<>();
-	private boolean started;
 	@Inject
 	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
+		super(eventBus);
 		this.client = client;
 		this.config = config;
-		this.eventBus = eventBus;
 		this.dynamicRenderDistance = dynamicRenderDistance;
 		this.areaManager = areaManager;
 	}
-	public void start() {
-		if (started) return;
-		eventBus.register(this);
-		started = true;
-	}
-	public void stop() {
-		if (started) {
-			eventBus.unregister(this);
-			started = false;
-		}
-		clearAllTracking();
-	}
+	@Override
+	protected void onStop(boolean wasStarted) { clearAllTracking(); }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameStateChanged(GameStateChanged event) {
@@ -64,10 +53,6 @@ public class FadingPlayerManager {
 			return;
 		}
 		if (areaManager.isPlayerInExcludedArea()) {
-			clearAllTracking();
-			return;
-		}
-		if (!config.enableFadingPlayers()) {
 			clearAllTracking();
 			return;
 		}
@@ -145,17 +130,25 @@ public class FadingPlayerManager {
 						if (Math.abs(dx) > Math.abs(dy)) pushX = Integer.signum(dx);
 						else if (Math.abs(dy) > Math.abs(dx)) pushY = Integer.signum(dy);
 						else { pushX = Integer.signum(dx); pushY = Integer.signum(dy); }
-						while ((pushX != 0 || pushY != 0) && initialFadeLocation.distanceTo(currentLocalPlayerLocation) <= renderDistance) {
-							initialFadeLocation = new WorldPoint(initialFadeLocation.getX() + pushX, initialFadeLocation.getY() + pushY, initialFadeLocation.getPlane());
+						if ((pushX != 0 || pushY != 0) && predictedNextLocation.getPlane() == currentLocalPlayerLocation.getPlane()) {
+							int x = predictedNextLocation.getX();
+							int y = predictedNextLocation.getY();
+							int lx = currentLocalPlayerLocation.getX();
+							int ly = currentLocalPlayerLocation.getY();
+							boolean moved = false;
+							while (Math.max(Math.abs(x - lx), Math.abs(y - ly)) <= renderDistance) {
+								x += pushX;
+								y += pushY;
+								moved = true;
+							}
+							if (moved) initialFadeLocation = new WorldPoint(x, y, predictedNextLocation.getPlane());
 						}
 					}
 				}
 			} else {
 				initialFadeLocation = lastLocation;
 			}
-			FadingPlayer fp = new FadingPlayer(player, velocity);
-			fp.setLastLocation(initialFadeLocation);
-			fadingPlayers.put(player, fp);
+			fadingPlayers.put(player, new FadingPlayer(player, velocity, initialFadeLocation));
 		}
 		Map<Player, WorldPoint> tmp = twoTicksAgoPlayerLocations;
 		twoTicksAgoPlayerLocations = lastTickPlayerLocations;
