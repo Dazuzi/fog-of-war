@@ -1,8 +1,16 @@
 package com.fogofwar;
 import net.runelite.client.config.*;
 import java.awt.*;
-@ConfigGroup("entityrenderdistance")
+@ConfigGroup("fogofwar")
 public interface FogOfWarConfig extends Config {
+	@ConfigItem(
+			keyName = "settingsVersion",
+			name = "Settings version",
+			description = "",
+			hidden = true
+	)
+	@SuppressWarnings("unused")
+	default int settingsVersion() { return 0; }
 	@ConfigItem(
 			keyName = "onlyInWilderness",
 			name = "Only show in Wilderness",
@@ -17,13 +25,13 @@ public interface FogOfWarConfig extends Config {
 	)
 	String worldSection = "worldSection";
 	@ConfigItem(
-			keyName = "showWorldFog",
-			name = "Fog of war",
-			description = "Shades the area outside of the render distance with a fog effect.",
+			keyName = "worldMode",
+			name = "World overlay",
+			description = "Controls the render distance overlay in the world view.",
 			section = worldSection,
 			position = 0
 	)
-	default boolean showWorldFog() { return true; }
+	default FogDisplayMode worldMode() { return FogDisplayMode.FOG; }
 	@Alpha
 	@ConfigItem(
 			keyName = "worldFogColour",
@@ -33,29 +41,13 @@ public interface FogOfWarConfig extends Config {
 			position = 1
 	)
 	default Color worldFogColour() { return new Color(0, 0, 0, 125); }
-	@ConfigItem(
-			keyName = "excludeEntities",
-			name = "Exclude Entities from Fog",
-			description = "Prevents the fog from drawing on top of players and NPCs. Major negative performance impact in crowded areas.",
-			section = worldSection,
-			position = 2
-	)
-	default boolean excludeEntities() { return false; }
-	@ConfigItem(
-			keyName = "showWorldBorder",
-			name = "Show border",
-			description = "Shows the render distance border in the world view.",
-			section = worldSection,
-			position = 3
-	)
-	default boolean showWorldBorder() { return false; }
 	@Alpha
 	@ConfigItem(
 			keyName = "worldBorderColour",
 			name = "Border colour",
 			description = "The colour of the world render distance border.",
 			section = worldSection,
-			position = 4
+			position = 2
 	)
 	default Color worldBorderColour() { return new Color(0, 0, 0, 125); }
 	@Range(min = 1, max = 16)
@@ -64,9 +56,17 @@ public interface FogOfWarConfig extends Config {
 			name = "Border thickness",
 			description = "The thickness of the world render distance border.",
 			section = worldSection,
-			position = 5
+			position = 3
 	)
 	default int worldBorderThickness() { return 1; }
+	@ConfigItem(
+			keyName = "excludeEntities",
+			name = "Exclude entities from fog",
+			description = "Prevents the fog from drawing on top of players and NPCs. Major negative performance impact in crowded areas.",
+			section = worldSection,
+			position = 4
+	)
+	default boolean excludeEntities() { return false; }
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",
@@ -74,13 +74,13 @@ public interface FogOfWarConfig extends Config {
 	)
 	String minimapSection = "minimapSection";
 	@ConfigItem(
-			keyName = "showMinimapFog",
-			name = "Fog of war",
-			description = "Shades the area outside the render distance on the minimap with a fog effect.",
+			keyName = "minimapMode",
+			name = "Minimap overlay",
+			description = "Controls the render distance overlay on the minimap.",
 			section = minimapSection,
 			position = 0
 	)
-	default boolean showMinimapFog() { return true; }
+	default FogDisplayMode minimapMode() { return FogDisplayMode.FOG; }
 	@Alpha
 	@ConfigItem(
 			keyName = "minimapFogColour",
@@ -90,21 +90,13 @@ public interface FogOfWarConfig extends Config {
 			position = 1
 	)
 	default Color minimapFogColour() { return new Color(0, 0, 0, 125); }
-	@ConfigItem(
-			keyName = "showMinimapBorder",
-			name = "Show border",
-			description = "Shows the render distance border on the minimap.",
-			section = minimapSection,
-			position = 2
-	)
-	default boolean showMinimapBorder() { return false; }
 	@Alpha
 	@ConfigItem(
 			keyName = "minimapBorderColour",
 			name = "Border colour",
 			description = "The colour of the minimap render distance border.",
 			section = minimapSection,
-			position = 3
+			position = 2
 	)
 	default Color minimapBorderColour() { return new Color(0, 0, 0, 125); }
 	@Range(min = 1, max = 16)
@@ -113,7 +105,7 @@ public interface FogOfWarConfig extends Config {
 			name = "Border thickness",
 			description = "The thickness of the minimap render distance border.",
 			section = minimapSection,
-			position = 4
+			position = 3
 	)
 	default int minimapBorderThickness() { return 1; }
 	@ConfigSection(
@@ -123,19 +115,37 @@ public interface FogOfWarConfig extends Config {
 	)
 	String fadingPlayerSection = "fadingPlayerSection";
 	@ConfigItem(
-			keyName = "enableFadingPlayers",
-			name = "Enable fading player tiles",
-			description = "Mark players that leave render distance with a fading marker.",
+			keyName = "fadingPlayerMode",
+			name = "Fading player tiles",
+			description = "Controls fading markers for players that leave render distance.",
 			section = fadingPlayerSection,
 			position = 0
 	)
-	default boolean enableFadingPlayers() { return false; }
+	default FadingPlayerMode fadingPlayerMode() { return FadingPlayerMode.OFF; }
+	@Alpha
 	@ConfigItem(
-			keyName = "onlyFadeAtRenderLimit",
-			name = "Only fade at the limit",
-			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
+			keyName = "fadeColor",
+			name = "Fade marker colour",
+			description = "The colour of the fading tile marker.",
 			section = fadingPlayerSection,
 			position = 1
+	)
+	default Color fadeColor() { return new Color(255, 0, 0, 150); }
+	@Range(min = 1, max = 16)
+	@ConfigItem(
+			keyName = "fadeDuration",
+			name = "Fade duration (ticks)",
+			description = "How many game ticks it takes for a marker to completely fade.",
+			section = fadingPlayerSection,
+			position = 2
+	)
+	default int fadeDuration() { return 2; }
+	@ConfigItem(
+			keyName = "onlyFadeAtRenderLimit",
+			name = "Only fade at the render limit",
+			description = "Only create a fading marker if the player disappears at the edge of the render distance.",
+			section = fadingPlayerSection,
+			position = 3
 	)
 	default boolean onlyFadeAtRenderLimit() { return true; }
 	@ConfigItem(
@@ -143,7 +153,7 @@ public interface FogOfWarConfig extends Config {
 			name = "Extrapolate movement",
 			description = "Fading player markers will continue to move based on their last known velocity.",
 			section = fadingPlayerSection,
-			position = 2
+			position = 4
 	)
 	default boolean extrapolateMovement() { return true; }
 	@ConfigItem(
@@ -151,43 +161,9 @@ public interface FogOfWarConfig extends Config {
 			name = "Label tiles after players",
 			description = "Show the player's name on the fading marker in the world view.",
 			section = fadingPlayerSection,
-			position = 3
-	)
-	default boolean showFadeNames() { return true; }
-	@ConfigItem(
-			keyName = "showFadingInWorld",
-			name = "Show in world",
-			description = "Show fading player markers in the main game view.",
-			section = fadingPlayerSection,
-			position = 4
-	)
-	default boolean showFadingInWorld() { return true; }
-	@ConfigItem(
-			keyName = "showFadingOnMinimap",
-			name = "Show on minimap",
-			description = "Show fading player markers on the minimap.",
-			section = fadingPlayerSection,
 			position = 5
 	)
-	default boolean showFadingOnMinimap() { return true; }
-	@Range(min = 1, max = 16)
-	@ConfigItem(
-			keyName = "fadeDuration",
-			name = "Fade duration (ticks)",
-			description = "How many game ticks it takes for a marker to completely fade.",
-			section = fadingPlayerSection,
-			position = 6
-	)
-	default int fadeDuration() { return 2; }
-	@Alpha
-	@ConfigItem(
-			keyName = "fadeColor",
-			name = "Fade marker colour",
-			description = "The colour of the fading tile marker.",
-			section = fadingPlayerSection,
-			position = 7
-	)
-	default Color fadeColor() { return new Color(255, 0, 0, 150); }
+	default boolean showFadeNames() { return true; }
 	@ConfigSection(
 			name = "Tweaks",
 			description = "Advanced settings for experimental features.",
@@ -231,7 +207,7 @@ public interface FogOfWarConfig extends Config {
 	)
 	default int dynamicRenderDistancePlayerThreshold() { return 150; }
 	@ConfigItem(
-			keyName = "showPlaneDisplay",
+			keyName = "showDebugOverlay",
 			name = "Show debug overlay",
 			description = "Shows plane, player count, and render distance.",
 			section = tweaksSection,

@@ -32,7 +32,7 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.enableFadingPlayers() || !config.showFadingOnMinimap() || clientState.isSuppressed(config)) return null;
+		if (!config.fadingPlayerMode().showsMinimap() || clientState.isSuppressed(config)) return null;
 		Widget minimapWidget = MinimapUtil.getMinimapWidget(client);
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();

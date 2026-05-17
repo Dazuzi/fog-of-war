@@ -30,7 +30,7 @@ public class FadingPlayerOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.enableFadingPlayers() || !config.showFadingInWorld() || clientState.isSuppressed(config)) return null;
+		if (!config.fadingPlayerMode().showsWorld() || clientState.isSuppressed(config)) return null;
 		WorldView wv = client.getTopLevelWorldView();
 		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, wv, fadingPlayer);
 		return null;

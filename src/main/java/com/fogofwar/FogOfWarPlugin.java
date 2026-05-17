@@ -24,13 +24,16 @@ import javax.inject.Inject;
 @PluginDescriptor(
 		name = "Fog of War",
 		description = "Applies a fog of war effect outside of the player render distance, in both the world and on the minimap.",
-		configName = "EntityRenderDistancePlugin"
+		configName = "FogOfWarPlugin"
 )
 public class FogOfWarPlugin extends Plugin {
-	private static final String CONFIG_GROUP = "entityrenderdistance";
+	private static final String CONFIG_GROUP = FogOfWarConfigMigration.CONFIG_GROUP;
 	@Inject
 	@SuppressWarnings("unused")
 	private FogOfWarConfig config;
+	@Inject
+	@SuppressWarnings("unused")
+	private ConfigManager configManager;
 	@Inject
 	@SuppressWarnings("unused")
 	private ClientState clientState;
@@ -70,7 +73,10 @@ public class FogOfWarPlugin extends Plugin {
 	private boolean fadingPlayerOverlayEnabled;
 	private boolean fadingPlayerMinimapOverlayEnabled;
 	@Override
-	protected void startUp() { updateComponents(); }
+	protected void startUp() {
+		FogOfWarConfigMigration.migrate(configManager);
+		updateComponents();
+	}
 	@Override
 	protected void shutDown() {
 		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, false);
@@ -102,10 +108,13 @@ public class FogOfWarPlugin extends Plugin {
 	}
 	private void updateComponents() {
 		boolean areaEnabled = isCurrentAreaEnabled();
-		boolean worldActive = areaEnabled && (config.showWorldFog() || config.showWorldBorder());
-		boolean minimapActive = areaEnabled && (config.showMinimapFog() || config.showMinimapBorder());
-		boolean fadingWorldActive = areaEnabled && config.enableFadingPlayers() && config.showFadingInWorld();
-		boolean fadingMinimapActive = areaEnabled && config.enableFadingPlayers() && config.showFadingOnMinimap();
+		FogDisplayMode worldMode = config.worldMode();
+		FogDisplayMode minimapMode = config.minimapMode();
+		FadingPlayerMode fadingPlayerMode = config.fadingPlayerMode();
+		boolean worldActive = areaEnabled && worldMode.isEnabled();
+		boolean minimapActive = areaEnabled && minimapMode.isEnabled();
+		boolean fadingWorldActive = areaEnabled && fadingPlayerMode.showsWorld();
+		boolean fadingMinimapActive = areaEnabled && fadingPlayerMode.showsMinimap();
 		boolean fadingActive = fadingWorldActive || fadingMinimapActive;
 		boolean renderDistanceActive = worldActive || minimapActive || fadingActive;
 		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, worldActive);
@@ -119,7 +128,7 @@ public class FogOfWarPlugin extends Plugin {
 		else fadingPlayerManager.stop();
 		if (config.enableDynamicRenderDistance() && renderDistanceActive) dynamicRenderDistance.start();
 		else dynamicRenderDistance.stop();
-		if (worldActive && config.showWorldFog() && config.excludeEntities()) visibleActorTracker.start();
+		if (worldActive && worldMode.showsFog() && config.excludeEntities()) visibleActorTracker.start();
 		else visibleActorTracker.stop();
 	}
 	private boolean isCurrentAreaEnabled() { return !config.onlyInWilderness() || !clientState.isNotInWilderness(); }
@@ -132,6 +141,7 @@ public class FogOfWarPlugin extends Plugin {
 	@Provides
 	@SuppressWarnings("unused")
 	FogOfWarConfig provideConfig(ConfigManager configManager) {
+		FogOfWarConfigMigration.migrate(configManager);
 		return configManager.getConfig(FogOfWarConfig.class);
 	}
 }
