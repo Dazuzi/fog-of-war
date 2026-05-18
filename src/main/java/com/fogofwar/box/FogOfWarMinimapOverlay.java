@@ -77,7 +77,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		if (clientState.isSuppressed(config, areaManager)) return null;
-		FogDisplayMode mode = config.minimapMode();
+		FogDisplayMode mode = config.minimapDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
 		if (!showFog && !showBorder) return null;
@@ -89,7 +89,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapClipShape);
 		int landRadius = dynamicRenderDistance.getCurrentRenderDistance();
-		int radius = rc.isOnWorldEntity() ? config.boatRenderDistanceRadius() : landRadius;
+		int radius = rc.isOnWorldEntity() ? config.sailingRenderDistance() : landRadius;
 		LocalPoint centerLp = getRenderCenter(rc, radius, landRadius);
 		WorldPoint centerWp = centerLp != null ? WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane()) : rc.getWorldPoint();
 		List<Point> points = getBoundaryPointsWithNulls(rc.getWorldView(), centerWp, centerLp, radius);
@@ -99,7 +99,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			graphics.setClip(oldClip);
 			return null;
 		}
-		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showMinimapSailingLandRenderDistance() && landRadius < radius;
+		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showMinimapLandRenderDistanceWhileSailing() && landRadius < radius;
 		GeneralPath sailingLandPath = null;
 		if (showSailingLandRenderDistance) {
 			LocalPoint sailingLandCenterLp = getRenderCenter(rc, landRadius, landRadius);

@@ -22,21 +22,21 @@ public class DynamicRenderDistance extends LifecycleComponent {
 		super(eventBus);
 		this.client = client;
 		this.config = config;
-		this.currentRenderDistance = config.renderDistanceRadius();
+		this.currentRenderDistance = config.landRenderDistance();
 	}
 	@Override
-	protected void onStop(boolean wasStarted) { currentRenderDistance = config.renderDistanceRadius(); }
+	protected void onStop(boolean wasStarted) { currentRenderDistance = config.landRenderDistance(); }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
-		int maxRadius = config.renderDistanceRadius();
-		if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !config.enableDynamicRenderDistance()) {
+		int maxRadius = config.landRenderDistance();
+		if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !config.dynamicRenderDistanceEnabled()) {
 			this.currentRenderDistance = maxRadius;
 			return;
 		}
 		WorldView worldView = client.getTopLevelWorldView();
 		int count = Players.count(worldView);
-		if (count < config.dynamicRenderDistancePlayerThreshold()) {
+		if (count < config.dynamicRenderDistanceThreshold()) {
 			this.currentRenderDistance = maxRadius;
 			return;
 		}

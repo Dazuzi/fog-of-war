@@ -122,7 +122,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 		updateCameraState();
 		cacheSeen.clear();
 		if (clientState.isSuppressed(config, areaManager)) return null;
-		FogDisplayMode mode = config.worldMode();
+		FogDisplayMode mode = config.worldDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
 		if (!showFog && !showBorder) return null;
@@ -130,13 +130,14 @@ public class FogOfWarWorldOverlay extends Overlay {
 		if (rc == null) return null;
 		WorldView worldView = rc.getWorldView();
 		int landRadius = dynamicRenderDistance.getCurrentRenderDistance();
-		int radius = rc.isOnWorldEntity() ? config.boatRenderDistanceRadius() : landRadius;
+		int radius = rc.isOnWorldEntity() ? config.sailingRenderDistance() : landRadius;
 		int plane = rc.getWorldPoint().getPlane();
 		LocalPoint centerLp = getRenderCenter(rc, radius, landRadius);
 		GeneralPath boundary = createRenderAreaBoundary(worldView, centerLp, plane, radius);
-		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showSailingLandRenderDistance() && landRadius < radius;
+		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showWorldLandRenderDistanceWhileSailing() && landRadius < radius;
 		LocalPoint sailingLandCenterLp = showSailingLandRenderDistance ? getRenderCenter(rc, landRadius, landRadius) : null;
-		GeneralPath sailingLandBoundary = showSailingLandRenderDistance ? createSailingLandRenderAreaBoundary(worldView, sailingLandCenterLp, plane, landRadius) : null;
+		GeneralPath sailingLandBoundary = null;
+		if (showSailingLandRenderDistance) sailingLandBoundary = createSailingLandRenderAreaBoundary(worldView, sailingLandCenterLp, plane, landRadius);
 		setViewportBounds();
 		if (boundary == null) {
 			if (showFog) {
@@ -162,18 +163,13 @@ public class FogOfWarWorldOverlay extends Overlay {
 		if (boundary.contains(viewport)) return;
 		createFogPath(boundary);
 		graphics.setColor(config.worldFogColour());
-		EntityExclusionLimit exclusionLimit = config.entityExclusionLimit();
+		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
 		if (!exclusionLimit.isEnabled()) {
 			graphics.fill(fogPath);
 			return;
 		}
-		Area result = buildExclusion(worldView, boundary, centerLp, plane, radius, exclusionLimit.getLimit());
-		if (result == null) {
-			graphics.fill(fogPath);
-			return;
-		}
 		Area fogArea = new Area(fogPath);
-		fogArea.subtract(result);
+		subtractExclusions(fogArea, worldView, boundary, centerLp, plane, radius, exclusionLimit.getLimit());
 		graphics.fill(fogArea);
 	}
 	private void updateCameraState() {
@@ -181,21 +177,31 @@ public class FogOfWarWorldOverlay extends Overlay {
 		int p = client.getCameraPitch(), w = client.getCameraYaw();
 		lastCamX = x; lastCamY = y; lastCamZ = z; lastCamPitch = p; lastCamYaw = w;
 	}
-	private Area buildExclusion(WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, int limit) {
-		collectExclusionCandidates(worldView, boundary, centerLp, plane, radius);
+	private void subtractExclusions(Area fogArea, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, int limit) {
+		boolean all = limit == Integer.MAX_VALUE;
+		collectExclusionCandidates(worldView, boundary, centerLp, plane, radius, !all);
 		if (exclusionCandidateCount == 0) {
 			hullCache.keySet().retainAll(cacheSeen);
-			return null;
+			return;
 		}
-		exclusionCandidates.subList(0, exclusionCandidateCount).sort(EXCLUSION_CANDIDATE_ORDER);
-		Area result = buildSelectedExclusionArea(boundary, limit);
+		if (all) subtractAllExclusionAreas(fogArea, boundary);
+		else {
+			exclusionCandidates.subList(0, exclusionCandidateCount).sort(EXCLUSION_CANDIDATE_ORDER);
+			subtractSelectedExclusionAreas(fogArea, boundary, limit);
+		}
 		hullCache.keySet().retainAll(cacheSeen);
-		return result;
 	}
-	private void collectExclusionCandidates(WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius) {
+	private void subtractAllExclusionAreas(Area fogArea, GeneralPath boundary) {
+		for (int i = 0; i < exclusionCandidateCount; i++) {
+			Area entryArea = getCandidateArea(exclusionCandidates.get(i), boundary);
+			if (entryArea == null) continue;
+			subtractExclusionArea(fogArea, entryArea);
+		}
+	}
+	private void collectExclusionCandidates(WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, boolean ranked) {
 		exclusionCandidateCount = 0;
 		int localRadius = radius * LOCAL_TILE_SIZE + HALF_TILE_SIZE;
-		int bucketColumns = Math.max(1, (viewport.width + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
+		int bucketColumns = ranked ? Math.max(1, (viewport.width + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE) : 1;
 		for (Actor actor : visibleActorTracker.getVisibleActors()) {
 			if (actor == null || actor.getWorldView() != worldView) continue;
 			CachedHull cached = hullCache.get(actor);
@@ -225,11 +231,14 @@ public class FogOfWarWorldOverlay extends Overlay {
 			Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
 			boolean insideViewport = canvasPoint != null && viewport.contains(canvasPoint.getX(), canvasPoint.getY());
 			if (!hit && !insideViewport) continue;
-			int bucket = insideViewport ? getExclusionBucket(canvasPoint, bucketColumns) : -1;
-			int score = Math.abs(edgeDistance);
-			if (edgeDistance < 0) score += LOCAL_TILE_SIZE;
-			if (!(actor instanceof Player)) score += LOCAL_TILE_SIZE / 2;
-			if (hit) score -= LOCAL_TILE_SIZE * 8;
+			int bucket = -1, score = 0;
+			if (ranked) {
+				bucket = insideViewport ? getExclusionBucket(canvasPoint, bucketColumns) : -1;
+				score = Math.abs(edgeDistance);
+				if (edgeDistance < 0) score += LOCAL_TILE_SIZE;
+				if (!(actor instanceof Player)) score += LOCAL_TILE_SIZE / 2;
+				if (hit) score -= LOCAL_TILE_SIZE * 8;
+			}
 			addExclusionCandidate(actor, cached, awp, anim, frame, pose, poseFrame, hit, score, bucket, canvasPoint);
 		}
 	}
@@ -242,8 +251,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 		if (exclusionCandidateCount == exclusionCandidates.size()) exclusionCandidates.add(new ExclusionCandidate());
 		exclusionCandidates.get(exclusionCandidateCount++).set(actor, cached, awp, anim, frame, pose, poseFrame, hit, score, bucket, canvasPoint);
 	}
-	private Area buildSelectedExclusionArea(GeneralPath boundary, int limit) {
-		Area result = null;
+	private void subtractSelectedExclusionAreas(Area fogArea, GeneralPath boundary, int limit) {
 		int bucketColumns = Math.max(1, (viewport.width + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
 		int bucketRows = Math.max(1, (viewport.height + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
 		boolean[] usedBuckets = new boolean[bucketColumns * bucketRows];
@@ -258,12 +266,13 @@ public class FogOfWarWorldOverlay extends Overlay {
 				if (entryArea == null) continue;
 				candidate.selected = true;
 				if (candidate.bucket >= 0) usedBuckets[candidate.bucket] = true;
-				if (result == null) result = new Area(entryArea);
-				else result.add(entryArea);
+				subtractExclusionArea(fogArea, entryArea);
 				selected++;
 			}
 		}
-		return result;
+	}
+	private void subtractExclusionArea(Area fogArea, Area entryArea) {
+		fogArea.subtract(entryArea);
 	}
 	private Area getCandidateArea(ExclusionCandidate candidate, GeneralPath boundary) {
 		CachedHull cached = candidate.cached;
@@ -321,10 +330,9 @@ public class FogOfWarWorldOverlay extends Overlay {
 		Area area = new Area(boundary);
 		area.subtract(new Area(landBoundary));
 		if (area.isEmpty()) return;
-		EntityExclusionLimit exclusionLimit = config.entityExclusionLimit();
+		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
 		if (exclusionLimit.isEnabled()) {
-			Area result = buildExclusion(worldView, landBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
-			if (result != null) area.subtract(result);
+			subtractExclusions(area, worldView, landBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
 		}
 		if (area.isEmpty()) return;
 		graphics.setColor(getSailingExtendedFogColour());

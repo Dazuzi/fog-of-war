@@ -57,9 +57,9 @@ public class FadingPlayerManager extends LifecycleComponent {
 			return;
 		}
 		int renderDistance = dynamicRenderDistance.getCurrentRenderDistance();
-		int fadeDuration = config.fadeDuration();
-		boolean extrapolate = config.extrapolateMovement();
-		boolean onlyAtLimit = config.onlyFadeAtRenderLimit();
+		int fadeDuration = config.fadeDurationTicks();
+		boolean extrapolate = config.predictMovement();
+		boolean onlyAtLimit = config.onlyFadeAtRenderEdge();
 		handleFadingPlayers(fadeDuration, extrapolate, renderDistance);
 		updatePlayerTracking(extrapolate, onlyAtLimit, renderDistance);
 	}

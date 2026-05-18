@@ -30,7 +30,7 @@ public class FadingPlayerOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.fadingPlayerMode().showsWorld() || clientState.isSuppressed(config)) return null;
+		if (!config.playerFadeMarkerMode().showsWorld() || clientState.isSuppressed(config)) return null;
 		WorldView wv = client.getTopLevelWorldView();
 		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, wv, fadingPlayer);
 		return null;
@@ -44,7 +44,7 @@ public class FadingPlayerOverlay extends Overlay {
 		Color color = fadingPlayer.getColor(config);
 		graphics.setColor(color);
 		graphics.fill(poly);
-		if (config.showFadeNames()) {
+		if (config.showFadeMarkerNames()) {
 			String name = fadingPlayer.getPlayer().getName();
 			if (name != null) {
 				Point textLoc = Perspective.getCanvasTextLocation(client, graphics, lp, name, 0);

@@ -26,7 +26,7 @@ public class DebugOverlay extends OverlayPanel {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.showDebugOverlay() || clientState.isClientNotReady()) return null;
+		if (!config.debugOverlayEnabled() || clientState.isClientNotReady()) return null;
 		Player localPlayer = client.getLocalPlayer();
 		WorldView wv = localPlayer != null ? localPlayer.getWorldView() : null;
 		if (wv == null) wv = client.getTopLevelWorldView();

@@ -74,7 +74,6 @@ public class FogOfWarPlugin extends Plugin {
 	private boolean fadingPlayerMinimapOverlayEnabled;
 	@Override
 	protected void startUp() {
-		FogOfWarConfigMigration.migrate(configManager);
 		updateComponents();
 	}
 	@Override
@@ -108,9 +107,9 @@ public class FogOfWarPlugin extends Plugin {
 	}
 	private void updateComponents() {
 		boolean areaEnabled = isCurrentAreaEnabled();
-		FogDisplayMode worldMode = config.worldMode();
-		FogDisplayMode minimapMode = config.minimapMode();
-		FadingPlayerMode fadingPlayerMode = config.fadingPlayerMode();
+		FogDisplayMode worldMode = config.worldDisplayMode();
+		FogDisplayMode minimapMode = config.minimapDisplayMode();
+		FadingPlayerMode fadingPlayerMode = config.playerFadeMarkerMode();
 		boolean worldActive = areaEnabled && worldMode.isEnabled();
 		boolean minimapActive = areaEnabled && minimapMode.isEnabled();
 		boolean fadingWorldActive = areaEnabled && fadingPlayerMode.showsWorld();
@@ -119,16 +118,16 @@ public class FogOfWarPlugin extends Plugin {
 		boolean renderDistanceActive = worldActive || minimapActive || fadingActive;
 		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, worldActive);
 		minimapOverlayEnabled = setOverlayEnabled(minimapOverlay, minimapOverlayEnabled, minimapActive);
-		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, config.showDebugOverlay());
+		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, config.debugOverlayEnabled());
 		fadingPlayerOverlayEnabled = setOverlayEnabled(fadingPlayerOverlay, fadingPlayerOverlayEnabled, fadingWorldActive);
 		fadingPlayerMinimapOverlayEnabled = setOverlayEnabled(fadingPlayerMinimapOverlay, fadingPlayerMinimapOverlayEnabled, fadingMinimapActive);
 		if (renderDistanceActive) areaManager.start();
 		else areaManager.stop();
 		if (fadingActive) fadingPlayerManager.start();
 		else fadingPlayerManager.stop();
-		if (config.enableDynamicRenderDistance() && renderDistanceActive) dynamicRenderDistance.start();
+		if (config.dynamicRenderDistanceEnabled() && renderDistanceActive) dynamicRenderDistance.start();
 		else dynamicRenderDistance.stop();
-		if (worldActive && worldMode.showsFog() && config.entityExclusionLimit().isEnabled()) visibleActorTracker.start();
+		if (worldActive && worldMode.showsFog() && config.actorCutoutLimit().isEnabled()) visibleActorTracker.start();
 		else visibleActorTracker.stop();
 	}
 	private boolean isCurrentAreaEnabled() { return !config.onlyInWilderness() || !clientState.isNotInWilderness(); }

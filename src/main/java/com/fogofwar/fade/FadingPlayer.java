@@ -23,12 +23,12 @@ class FadingPlayer {
 		this.lastLocation = initialLocation;
 	}
 	float getOpacity(FogOfWarConfig config) {
-		float d = Math.max(1, config.fadeDuration());
+		float d = Math.max(1, config.fadeDurationTicks());
 		return (d - ticksSinceDisappeared) / d;
 	}
 	Color getColor(FogOfWarConfig config) {
-		Color base = config.fadeColor();
-		int duration = config.fadeDuration();
+		Color base = config.fadeMarkerColour();
+		int duration = config.fadeDurationTicks();
 		int baseRgb = base.getRGB();
 		if (cachedColor != null && cachedTick == ticksSinceDisappeared && cachedFadeDuration == duration && cachedBaseRgb == baseRgb) return cachedColor;
 		float o = getOpacity(config);
