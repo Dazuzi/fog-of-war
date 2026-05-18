@@ -1,10 +1,10 @@
-package com.fogofwar;
+package com.fogofwar.config;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.RuneLiteConfig;
 import java.util.List;
-final class FogOfWarConfigMigration {
+public final class FogOfWarConfigMigration {
 	static final int SETTINGS_VERSION = 1;
-	static final String CONFIG_GROUP = "fogofwar";
+	public static final String CONFIG_GROUP = "fogofwar";
 	static final String OLD_CONFIG_GROUP = "entityrenderdistance";
 	private static final String PLUGIN_KEY = "fogofwarplugin";
 	private static final String OLD_PLUGIN_KEY = "entityrenderdistanceplugin";
@@ -55,7 +55,7 @@ final class FogOfWarConfigMigration {
 			"showPlaneDisplay"
 	};
 	private FogOfWarConfigMigration() {}
-	static void migrate(ConfigManager configManager) {
+	public static void migrate(ConfigManager configManager) {
 		boolean oldConfig = hasOldConfig(configManager) || hasOldPluginConfig(configManager);
 		migratePluginEnabled(configManager);
 		Integer settingsVersion = configManager.getConfiguration(CONFIG_GROUP, SETTINGS_VERSION_KEY, int.class);
@@ -66,7 +66,7 @@ final class FogOfWarConfigMigration {
 		if (oldConfig) {
 			for (String[] pair : DIRECT_KEYS) copy(configManager, pair[0], pair[1]);
 			migrateEntityExclusionLimit(configManager);
-			migrateDynamicRenderDistanceThreshold(configManager);
+			migrateRenderDistanceManagerThreshold(configManager);
 			migrateFogDisplayMode(configManager, "showWorldFog", "showWorldBorder", "worldDisplayMode");
 			migrateFogDisplayMode(configManager, "showMinimapFog", "showMinimapBorder", "minimapDisplayMode");
 			migrateFadingPlayerMode(configManager);
@@ -111,7 +111,7 @@ final class FogOfWarConfigMigration {
 		Boolean value = configManager.getConfiguration(OLD_CONFIG_GROUP, "excludeEntities", boolean.class);
 		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "actorCutoutLimit", toEntityExclusionLimit(value));
 	}
-	private static void migrateDynamicRenderDistanceThreshold(ConfigManager configManager) {
+	private static void migrateRenderDistanceManagerThreshold(ConfigManager configManager) {
 		if (configManager.getConfiguration(CONFIG_GROUP, "dynamicRenderDistanceThreshold") != null) return;
 		Boolean value = configManager.getConfiguration(OLD_CONFIG_GROUP, "enableDynamicRenderDistance", boolean.class);
 		if (value != null && value) configManager.setConfiguration(CONFIG_GROUP, "dynamicRenderDistanceThreshold", OLD_DYNAMIC_RENDER_DISTANCE_PLAYER_THRESHOLD);

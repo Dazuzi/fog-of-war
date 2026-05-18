@@ -1,6 +1,6 @@
 package com.fogofwar.fade;
-import com.fogofwar.FogOfWarConfig;
-import com.fogofwar.util.ClientState;
+import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;

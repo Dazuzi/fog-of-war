@@ -1,6 +1,6 @@
-package com.fogofwar.util;
+package com.fogofwar.render;
 import java.awt.BasicStroke;
-public final class CachedStroke {
+public final class StrokeCache {
 	private BasicStroke stroke;
 	private int width = -1;
 	public BasicStroke get(int w) {

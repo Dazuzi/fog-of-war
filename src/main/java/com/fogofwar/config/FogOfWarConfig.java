@@ -1,4 +1,4 @@
-package com.fogofwar;
+package com.fogofwar.config;
 import net.runelite.client.config.*;
 import java.awt.*;
 @ConfigGroup("fogofwar")

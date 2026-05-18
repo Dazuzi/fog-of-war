@@ -1,4 +1,4 @@
-package com.fogofwar.util;
+package com.fogofwar.state;
 import net.runelite.api.Player;
 import net.runelite.api.WorldView;
 public final class Players {

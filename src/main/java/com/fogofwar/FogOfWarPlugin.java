@@ -1,14 +1,19 @@
 package com.fogofwar;
-import com.fogofwar.box.FogOfWarMinimapOverlay;
-import com.fogofwar.box.FogOfWarWorldOverlay;
+import com.fogofwar.config.FadingPlayerMode;
+import com.fogofwar.config.FogDisplayMode;
+import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.config.FogOfWarConfigMigration;
 import com.fogofwar.debug.DebugOverlay;
 import com.fogofwar.fade.FadingPlayerManager;
 import com.fogofwar.fade.FadingPlayerMinimapOverlay;
 import com.fogofwar.fade.FadingPlayerOverlay;
-import com.fogofwar.util.AreaManager;
-import com.fogofwar.util.ClientState;
-import com.fogofwar.util.DynamicRenderDistance;
-import com.fogofwar.util.VisibleActorTracker;
+import com.fogofwar.lifecycle.OverlayToggle;
+import com.fogofwar.render.minimap.MinimapFogOverlay;
+import com.fogofwar.render.world.WorldFogOverlay;
+import com.fogofwar.state.AreaExclusionManager;
+import com.fogofwar.state.ClientState;
+import com.fogofwar.state.RenderDistanceManager;
+import com.fogofwar.actor.VisibleActorTracker;
 import com.google.inject.Provides;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
@@ -18,7 +23,6 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 @PluginDescriptor(
@@ -42,10 +46,10 @@ public class FogOfWarPlugin extends Plugin {
 	private OverlayManager overlayManager;
 	@Inject
 	@SuppressWarnings("unused")
-	private FogOfWarWorldOverlay worldOverlay;
+	private WorldFogOverlay worldOverlay;
 	@Inject
 	@SuppressWarnings("unused")
-	private FogOfWarMinimapOverlay minimapOverlay;
+	private MinimapFogOverlay minimapOverlay;
 	@Inject
 	@SuppressWarnings("unused")
 	private FadingPlayerManager fadingPlayerManager;
@@ -57,38 +61,46 @@ public class FogOfWarPlugin extends Plugin {
 	private FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
 	@Inject
 	@SuppressWarnings("unused")
-	private DynamicRenderDistance dynamicRenderDistance;
+	private RenderDistanceManager dynamicRenderDistance;
 	@Inject
 	@SuppressWarnings("unused")
-	private AreaManager areaManager;
+	private AreaExclusionManager areaManager;
 	@Inject
 	@SuppressWarnings("unused")
 	private VisibleActorTracker visibleActorTracker;
 	@Inject
 	@SuppressWarnings("unused")
 	private DebugOverlay debugOverlay;
-	private boolean worldOverlayEnabled;
-	private boolean minimapOverlayEnabled;
-	private boolean debugOverlayEnabled;
-	private boolean fadingPlayerOverlayEnabled;
-	private boolean fadingPlayerMinimapOverlayEnabled;
+	private OverlayToggle worldOverlayToggle;
+	private OverlayToggle minimapOverlayToggle;
+	private OverlayToggle debugOverlayToggle;
+	private OverlayToggle fadingPlayerOverlayToggle;
+	private OverlayToggle fadingPlayerMinimapOverlayToggle;
 	@Override
 	protected void startUp() {
+		initOverlayToggles();
 		updateComponents();
 	}
 	@Override
 	protected void shutDown() {
-		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, false);
-		minimapOverlayEnabled = setOverlayEnabled(minimapOverlay, minimapOverlayEnabled, false);
-		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, false);
-		fadingPlayerOverlayEnabled = setOverlayEnabled(fadingPlayerOverlay, fadingPlayerOverlayEnabled, false);
-		fadingPlayerMinimapOverlayEnabled = setOverlayEnabled(fadingPlayerMinimapOverlay, fadingPlayerMinimapOverlayEnabled, false);
+		worldOverlayToggle.set(false);
+		minimapOverlayToggle.set(false);
+		debugOverlayToggle.set(false);
+		fadingPlayerOverlayToggle.set(false);
+		fadingPlayerMinimapOverlayToggle.set(false);
 		worldOverlay.clearCaches();
 		minimapOverlay.clearCaches();
 		fadingPlayerManager.stop();
 		dynamicRenderDistance.stop();
 		areaManager.stop();
 		visibleActorTracker.stop();
+	}
+	private void initOverlayToggles() {
+		worldOverlayToggle = new OverlayToggle(overlayManager, worldOverlay);
+		minimapOverlayToggle = new OverlayToggle(overlayManager, minimapOverlay);
+		debugOverlayToggle = new OverlayToggle(overlayManager, debugOverlay);
+		fadingPlayerOverlayToggle = new OverlayToggle(overlayManager, fadingPlayerOverlay);
+		fadingPlayerMinimapOverlayToggle = new OverlayToggle(overlayManager, fadingPlayerMinimapOverlay);
 	}
 	@Subscribe
 	@SuppressWarnings("unused")
@@ -116,11 +128,11 @@ public class FogOfWarPlugin extends Plugin {
 		boolean fadingMinimapActive = areaEnabled && fadingPlayerMode.showsMinimap();
 		boolean fadingActive = fadingWorldActive || fadingMinimapActive;
 		boolean renderDistanceActive = worldActive || minimapActive || fadingActive;
-		worldOverlayEnabled = setOverlayEnabled(worldOverlay, worldOverlayEnabled, worldActive);
-		minimapOverlayEnabled = setOverlayEnabled(minimapOverlay, minimapOverlayEnabled, minimapActive);
-		debugOverlayEnabled = setOverlayEnabled(debugOverlay, debugOverlayEnabled, config.debugOverlayEnabled());
-		fadingPlayerOverlayEnabled = setOverlayEnabled(fadingPlayerOverlay, fadingPlayerOverlayEnabled, fadingWorldActive);
-		fadingPlayerMinimapOverlayEnabled = setOverlayEnabled(fadingPlayerMinimapOverlay, fadingPlayerMinimapOverlayEnabled, fadingMinimapActive);
+		worldOverlayToggle.set(worldActive);
+		minimapOverlayToggle.set(minimapActive);
+		debugOverlayToggle.set(config.debugOverlayEnabled());
+		fadingPlayerOverlayToggle.set(fadingWorldActive);
+		fadingPlayerMinimapOverlayToggle.set(fadingMinimapActive);
 		if (renderDistanceActive) areaManager.start();
 		else areaManager.stop();
 		if (fadingActive) fadingPlayerManager.start();
@@ -131,12 +143,6 @@ public class FogOfWarPlugin extends Plugin {
 		else visibleActorTracker.stop();
 	}
 	private boolean isCurrentAreaEnabled() { return !config.onlyInWilderness() || !clientState.isNotInWilderness(); }
-	private boolean setOverlayEnabled(Overlay overlay, boolean current, boolean enabled) {
-		if (current == enabled) return current;
-		if (enabled) overlayManager.add(overlay);
-		else overlayManager.remove(overlay);
-		return enabled;
-	}
 	@Provides
 	@SuppressWarnings("unused")
 	FogOfWarConfig provideConfig(ConfigManager configManager) {

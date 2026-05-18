@@ -1,8 +1,8 @@
 package com.fogofwar.fade;
-import com.fogofwar.FogOfWarConfig;
-import com.fogofwar.util.AreaManager;
-import com.fogofwar.util.DynamicRenderDistance;
-import com.fogofwar.util.LifecycleComponent;
+import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.state.AreaExclusionManager;
+import com.fogofwar.state.RenderDistanceManager;
+import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -22,16 +22,17 @@ import java.util.Set;
 public class FadingPlayerManager extends LifecycleComponent {
 	private final Client client;
 	private final FogOfWarConfig config;
-	private final DynamicRenderDistance dynamicRenderDistance;
-	private final AreaManager areaManager;
+	private final RenderDistanceManager dynamicRenderDistance;
+	private final AreaExclusionManager areaManager;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
 	private Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
 	private Map<Player, WorldPoint> twoTicksAgoPlayerLocations = new HashMap<>();
 	private Map<Player, WorldPoint> currentPlayerLocations = new HashMap<>();
 	private final Set<String> currentPlayerNames = new HashSet<>();
+	private final FadingPlayerPredictor predictor = new FadingPlayerPredictor();
 	@Inject
-	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
+	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, RenderDistanceManager dynamicRenderDistance, AreaExclusionManager areaManager) {
 		super(eventBus);
 		this.client = client;
 		this.config = config;
@@ -103,51 +104,9 @@ public class FadingPlayerManager extends LifecycleComponent {
 			WorldPoint lastLocation = entry.getValue();
 			if (lastLocation == null) continue;
 			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayerLocations.get(player);
-			WorldPoint velocity = (twoTicksAgoLocation != null)
-					? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
-					: new WorldPoint(0, 0, 0);
-			int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
-			int distanceFromPlayer = lastLocation.distanceTo(currentLocalPlayerLocation);
-			boolean isAtRenderLimit = distanceFromPlayer >= renderDistance - 1;
-			boolean isRunningNearLimit = distanceFromPlayer >= renderDistance - 2 && velocityMagnitude >= 2;
-			if (onlyAtLimit && !isAtRenderLimit && !isRunningNearLimit) continue;
-			WorldPoint initialFadeLocation;
-			if (extrapolate) {
-				int dx = lastLocation.getX() - currentLocalPlayerLocation.getX();
-				int dy = lastLocation.getY() - currentLocalPlayerLocation.getY();
-				boolean onXEdge = Math.abs(dx) >= renderDistance - 1;
-				boolean onYEdge = Math.abs(dy) >= renderDistance - 1;
-				WorldPoint predictedNextLocation = new WorldPoint(lastLocation.getX() + velocity.getX(), lastLocation.getY() + velocity.getY(), lastLocation.getPlane());
-				boolean isMovingIntoRenderArea = (onXEdge && dx * velocity.getX() < 0) || (onYEdge && dy * velocity.getY() < 0);
-				if (isMovingIntoRenderArea) {
-					int pushX = onXEdge ? Integer.signum(dx) : 0;
-					int pushY = onYEdge ? Integer.signum(dy) : 0;
-					initialFadeLocation = new WorldPoint(predictedNextLocation.getX() + pushX, predictedNextLocation.getY() + pushY, predictedNextLocation.getPlane());
-				} else {
-					initialFadeLocation = predictedNextLocation;
-					if (isAtRenderLimit || isRunningNearLimit) {
-						int pushX = 0, pushY = 0;
-						if (Math.abs(dx) > Math.abs(dy)) pushX = Integer.signum(dx);
-						else if (Math.abs(dy) > Math.abs(dx)) pushY = Integer.signum(dy);
-						else { pushX = Integer.signum(dx); pushY = Integer.signum(dy); }
-						if ((pushX != 0 || pushY != 0) && predictedNextLocation.getPlane() == currentLocalPlayerLocation.getPlane()) {
-							int x = predictedNextLocation.getX();
-							int y = predictedNextLocation.getY();
-							int lx = currentLocalPlayerLocation.getX();
-							int ly = currentLocalPlayerLocation.getY();
-							boolean moved = false;
-							while (Math.max(Math.abs(x - lx), Math.abs(y - ly)) <= renderDistance) {
-								x += pushX;
-								y += pushY;
-								moved = true;
-							}
-							if (moved) initialFadeLocation = new WorldPoint(x, y, predictedNextLocation.getPlane());
-						}
-					}
-				}
-			} else {
-				initialFadeLocation = lastLocation;
-			}
+			WorldPoint velocity = predictor.getVelocity(lastLocation, twoTicksAgoLocation);
+			if (!predictor.shouldFade(lastLocation, currentLocalPlayerLocation, velocity, onlyAtLimit, renderDistance)) continue;
+			WorldPoint initialFadeLocation = predictor.getInitialFadeLocation(lastLocation, currentLocalPlayerLocation, velocity, extrapolate, renderDistance);
 			fadingPlayers.put(player, new FadingPlayer(player, velocity, initialFadeLocation));
 		}
 		Map<Player, WorldPoint> tmp = twoTicksAgoPlayerLocations;

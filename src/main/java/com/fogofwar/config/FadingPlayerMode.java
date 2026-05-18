@@ -1,4 +1,4 @@
-package com.fogofwar;
+package com.fogofwar.config;
 public enum FadingPlayerMode {
 	OFF("Off"),
 	WORLD("World"),

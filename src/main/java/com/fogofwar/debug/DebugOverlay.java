@@ -1,8 +1,8 @@
 package com.fogofwar.debug;
-import com.fogofwar.FogOfWarConfig;
-import com.fogofwar.util.ClientState;
-import com.fogofwar.util.DynamicRenderDistance;
-import com.fogofwar.util.Players;
+import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.state.ClientState;
+import com.fogofwar.state.RenderDistanceManager;
+import com.fogofwar.state.Players;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.WorldView;
@@ -15,9 +15,9 @@ public class DebugOverlay extends OverlayPanel {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final DynamicRenderDistance dynamicRenderDistance;
+	private final RenderDistanceManager dynamicRenderDistance;
 	@Inject
-	public DebugOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance) {
+	public DebugOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager dynamicRenderDistance) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;

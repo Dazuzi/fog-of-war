@@ -1,4 +1,4 @@
-package com.fogofwar;
+package com.fogofwar.config;
 public enum FogDisplayMode {
 	OFF(false, false, "Off"),
 	FOG(true, false, "Fog"),

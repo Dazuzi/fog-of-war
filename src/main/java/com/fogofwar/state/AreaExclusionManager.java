@@ -1,4 +1,5 @@
-package com.fogofwar.util;
+package com.fogofwar.state;
+import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -11,7 +12,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.List;
 @Singleton
-public class AreaManager extends LifecycleComponent {
+public class AreaExclusionManager extends LifecycleComponent {
 	private static final List<ExcludedArea> EXCLUDED_AREAS = List.of(
 			new ExcludedArea(2367, 5053, 2432, 5119, 0),
 			new ExcludedArea(2256, 5328, 2286, 5359, 0),
@@ -27,7 +28,7 @@ public class AreaManager extends LifecycleComponent {
 	@Getter
 	private boolean playerInExcludedArea = false;
 	@Inject
-	public AreaManager(Client client, EventBus eventBus) {
+	public AreaExclusionManager(Client client, EventBus eventBus) {
 		super(eventBus);
 		this.client = client;
 	}

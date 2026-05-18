@@ -1,4 +1,4 @@
-package com.fogofwar.util;
+package com.fogofwar.lifecycle;
 import net.runelite.client.eventbus.EventBus;
 public abstract class LifecycleComponent {
 	protected final EventBus eventBus;

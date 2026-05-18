@@ -1,4 +1,4 @@
-package com.fogofwar.util;
+package com.fogofwar.state;
 import lombok.Value;
 import net.runelite.api.Client;
 import net.runelite.api.Player;

@@ -1,5 +1,6 @@
-package com.fogofwar.util;
-import com.fogofwar.FogOfWarConfig;
+package com.fogofwar.state;
+import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -12,13 +13,13 @@ import net.runelite.client.eventbus.Subscribe;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 @Singleton
-public class DynamicRenderDistance extends LifecycleComponent {
+public class RenderDistanceManager extends LifecycleComponent {
 	private final Client client;
 	private final FogOfWarConfig config;
 	@Getter
 	private int currentRenderDistance;
 	@Inject
-	public DynamicRenderDistance(Client client, FogOfWarConfig config, EventBus eventBus) {
+	public RenderDistanceManager(Client client, FogOfWarConfig config, EventBus eventBus) {
 		super(eventBus);
 		this.client = client;
 		this.config = config;

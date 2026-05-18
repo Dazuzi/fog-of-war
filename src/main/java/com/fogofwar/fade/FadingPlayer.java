@@ -1,5 +1,5 @@
 package com.fogofwar.fade;
-import com.fogofwar.FogOfWarConfig;
+import com.fogofwar.config.FogOfWarConfig;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Player;

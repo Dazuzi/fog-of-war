@@ -1,4 +1,4 @@
-package com.fogofwar;
+package com.fogofwar.config;
 import lombok.Getter;
 public enum EntityExclusionLimit {
 	NONE("None", 0),
