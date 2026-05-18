@@ -7,7 +7,7 @@ import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.util.Arrays;
-final class MinimapClipProvider {
+public final class MinimapClipProvider {
 	private static final int RESIZED_MINIMAP_CLIP_PADDING = 1;
 	private static final int FIXED_MINIMAP_CLIP_PADDING = 3;
 	private static final int[] ORB_WIDGETS = {InterfaceID.Orbs.HEALTH_BACKING, InterfaceID.Orbs.PRAYER_BACKING, InterfaceID.Orbs.RUNENERGY_BACKING, InterfaceID.Orbs.SPECENERGY_BACKING, InterfaceID.Orbs.ORB_WORLDMAP};
@@ -17,14 +17,14 @@ final class MinimapClipProvider {
 	private Shape cachedClipShape;
 	private long cachedOrbsHash;
 	private boolean cachedResized;
-	MinimapClipProvider(Client client) { this.client = client; }
+	public MinimapClipProvider(Client client) { this.client = client; }
 	void clearCaches() {
 		cachedMinimapBounds = null;
 		cachedClipShape = null;
 		cachedOrbsHash = 0;
 		Arrays.fill(currentOrbBounds, null);
 	}
-	Shape getClipShape(Widget minimapWidget) {
+	public Shape getClipShape(Widget minimapWidget) {
 		Rectangle bounds = minimapWidget.getBounds();
 		boolean resized = client.isResized();
 		long orbsHash = collectOrbBoundsAndHash();

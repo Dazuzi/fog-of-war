@@ -1,8 +1,9 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.render.minimap.MinimapClipProvider;
+import com.fogofwar.render.minimap.MinimapWidgetProvider;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
-import com.fogofwar.render.minimap.MinimapWidgetProvider;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -23,6 +24,7 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 	private final ClientState clientState;
 	private final FadingPlayerManager manager;
 	private final AreaExclusionManager areaExclusionManager;
+	private final MinimapClipProvider clipProvider;
 	@Inject
 	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, AreaExclusionManager areaExclusionManager) {
 		this.client = client;
@@ -30,6 +32,7 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		this.clientState = clientState;
 		this.manager = manager;
 		this.areaExclusionManager = areaExclusionManager;
+		this.clipProvider = new MinimapClipProvider(client);
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_HIGH);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
@@ -44,7 +47,7 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		Widget minimapWidget = MinimapWidgetProvider.getMinimapWidget(client);
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();
-		graphics.setClip(minimapWidget.getBounds());
+		graphics.setClip(clipProvider.getClipShape(minimapWidget));
 		for (FadingPlayer fadingPlayer : fadingPlayers) renderFadingPlayer(graphics, wv, fadingPlayer);
 		graphics.setClip(oldClip);
 		return null;
