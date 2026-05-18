@@ -114,18 +114,8 @@ public class FogOfWarWorldOverlay extends Overlay {
 		hullCache.clear();
 		cacheSeen.clear();
 	}
-
-	// TEMPORARY BENCHMARK
-	private long sampleStart = System.nanoTime();
-	private long accumulatedTimeNs = 0;
-	private int frameCount = 0;
-
 	@Override
 	public Dimension render(Graphics2D graphics) {
-
-		// TEMPORARY BENCHMARK
-		long start = System.nanoTime();
-
 		updateCameraState();
 		cacheSeen.clear();
 		if (clientState.isSuppressed(config, areaManager)) return null;
@@ -150,15 +140,6 @@ public class FogOfWarWorldOverlay extends Overlay {
 		}
 		if (showFog) renderWorldFog(graphics, worldView, boundary, centerLp, rc.getWorldPoint().getPlane(), radius);
 		if (showBorder) renderWorldBorder(graphics, boundary);
-
-		// TEMPORARY BENCHMARK
-		long elapsed = System.nanoTime() - start;accumulatedTimeNs += elapsed;frameCount++;long now = System.nanoTime();
-		if (now - sampleStart >= 1_000_000_000L) {
-			double averageMs = (accumulatedTimeNs / (double) frameCount) / 1_000_000.0;
-			System.out.printf("Average execution over %d frames: %.3f ms%n", frameCount, averageMs);
-			sampleStart = now;accumulatedTimeNs = 0;frameCount = 0;
-		}
-
 		return null;
 	}
 	private void setViewportBounds() {
