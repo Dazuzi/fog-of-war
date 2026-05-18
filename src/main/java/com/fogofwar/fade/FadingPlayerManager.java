@@ -22,8 +22,8 @@ import java.util.Set;
 public class FadingPlayerManager extends LifecycleComponent {
 	private final Client client;
 	private final FogOfWarConfig config;
-	private final RenderDistanceManager dynamicRenderDistance;
-	private final AreaExclusionManager areaManager;
+	private final RenderDistanceManager renderDistanceManager;
+	private final AreaExclusionManager areaExclusionManager;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
 	private Map<Player, WorldPoint> lastTickPlayerLocations = new HashMap<>();
@@ -32,12 +32,12 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private final Set<String> currentPlayerNames = new HashSet<>();
 	private final FadingPlayerPredictor predictor = new FadingPlayerPredictor();
 	@Inject
-	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, RenderDistanceManager dynamicRenderDistance, AreaExclusionManager areaManager) {
+	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, RenderDistanceManager renderDistanceManager, AreaExclusionManager areaExclusionManager) {
 		super(eventBus);
 		this.client = client;
 		this.config = config;
-		this.dynamicRenderDistance = dynamicRenderDistance;
-		this.areaManager = areaManager;
+		this.renderDistanceManager = renderDistanceManager;
+		this.areaExclusionManager = areaExclusionManager;
 	}
 	@Override
 	protected void onStop(boolean wasStarted) { clearAllTracking(); }
@@ -53,11 +53,11 @@ public class FadingPlayerManager extends LifecycleComponent {
 			clearAllTracking();
 			return;
 		}
-		if (areaManager.isPlayerInExcludedArea()) {
+		if (areaExclusionManager.isPlayerInExcludedArea()) {
 			clearAllTracking();
 			return;
 		}
-		int renderDistance = dynamicRenderDistance.getCurrentRenderDistance();
+		int renderDistance = renderDistanceManager.getCurrentRenderDistance();
 		int fadeDuration = config.fadeDurationTicks();
 		boolean extrapolate = config.predictMovement();
 		boolean onlyAtLimit = config.onlyFadeAtRenderEdge();

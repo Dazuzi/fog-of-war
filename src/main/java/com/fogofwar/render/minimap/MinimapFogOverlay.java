@@ -19,18 +19,18 @@ public class MinimapFogOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final RenderDistanceManager dynamicRenderDistance;
-	private final AreaExclusionManager areaManager;
+	private final RenderDistanceManager renderDistanceManager;
+	private final AreaExclusionManager areaExclusionManager;
 	private final MinimapClipProvider clipProvider;
 	private final MinimapRenderBoundary renderBoundary;
 	private final MinimapFogMask fogMask;
 	@Inject
-	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager dynamicRenderDistance, AreaExclusionManager areaManager) {
+	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager renderDistanceManager, AreaExclusionManager areaExclusionManager) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
-		this.dynamicRenderDistance = dynamicRenderDistance;
-		this.areaManager = areaManager;
+		this.renderDistanceManager = renderDistanceManager;
+		this.areaExclusionManager = areaExclusionManager;
 		this.clipProvider = new MinimapClipProvider(client);
 		this.renderBoundary = new MinimapRenderBoundary(client);
 		this.fogMask = new MinimapFogMask(config);
@@ -44,7 +44,7 @@ public class MinimapFogOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (clientState.isSuppressed(config, areaManager)) return null;
+		if (clientState.isSuppressed(config, areaExclusionManager)) return null;
 		FogDisplayMode mode = config.minimapDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
@@ -56,7 +56,7 @@ public class MinimapFogOverlay extends Overlay {
 		Shape minimapClipShape = clipProvider.getClipShape(minimap);
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapClipShape);
-		int landRadius = dynamicRenderDistance.getCurrentRenderDistance();
+		int landRadius = renderDistanceManager.getCurrentRenderDistance();
 		int radius = rc.isOnWorldEntity() ? config.sailingRenderDistance() : landRadius;
 		GeneralPath fogPath = renderBoundary.createRenderAreaPath(rc, radius, landRadius, minimap.getBounds());
 		if (fogPath == null) {

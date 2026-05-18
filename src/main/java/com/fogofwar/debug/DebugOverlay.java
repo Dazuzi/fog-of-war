@@ -15,13 +15,13 @@ public class DebugOverlay extends OverlayPanel {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final RenderDistanceManager dynamicRenderDistance;
+	private final RenderDistanceManager renderDistanceManager;
 	@Inject
-	public DebugOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager dynamicRenderDistance) {
+	public DebugOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager renderDistanceManager) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
-		this.dynamicRenderDistance = dynamicRenderDistance;
+		this.renderDistanceManager = renderDistanceManager;
 		setPosition(OverlayPosition.TOP_LEFT);
 	}
 	@Override
@@ -32,7 +32,7 @@ public class DebugOverlay extends OverlayPanel {
 		if (wv == null) wv = client.getTopLevelWorldView();
 		addLine("Current plane:", wv != null ? wv.getPlane() : "?");
 		addLine("Players:", Players.count(wv));
-		addLine("Render distance:", dynamicRenderDistance.getCurrentRenderDistance());
+		addLine("Render distance:", renderDistanceManager.getCurrentRenderDistance());
 		return super.render(graphics);
 	}
 	private void addLine(String left, Object right) {

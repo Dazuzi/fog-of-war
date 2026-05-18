@@ -21,19 +21,19 @@ public class WorldFogOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final RenderDistanceManager dynamicRenderDistance;
-	private final AreaExclusionManager areaManager;
+	private final RenderDistanceManager renderDistanceManager;
+	private final AreaExclusionManager areaExclusionManager;
 	private final Rectangle viewport = new Rectangle();
 	private final WorldRenderBoundary renderBoundary;
 	private final WorldFogMask fogMask;
 	private final ActorCutoutMask actorCutouts;
 	@Inject
-	public WorldFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager dynamicRenderDistance, AreaExclusionManager areaManager, VisibleActorTracker visibleActorTracker) {
+	public WorldFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager renderDistanceManager, AreaExclusionManager areaExclusionManager, VisibleActorTracker visibleActorTracker) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
-		this.dynamicRenderDistance = dynamicRenderDistance;
-		this.areaManager = areaManager;
+		this.renderDistanceManager = renderDistanceManager;
+		this.areaExclusionManager = areaExclusionManager;
 		this.renderBoundary = new WorldRenderBoundary(client);
 		this.fogMask = new WorldFogMask(config);
 		this.actorCutouts = new ActorCutoutMask(client, visibleActorTracker);
@@ -45,7 +45,7 @@ public class WorldFogOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		actorCutouts.beginFrame();
-		if (clientState.isSuppressed(config, areaManager)) return null;
+		if (clientState.isSuppressed(config, areaExclusionManager)) return null;
 		FogDisplayMode mode = config.worldDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
@@ -53,7 +53,7 @@ public class WorldFogOverlay extends Overlay {
 		RenderCenter rc = RenderCenter.resolve(client);
 		if (rc == null) return null;
 		WorldView worldView = rc.getWorldView();
-		int landRadius = dynamicRenderDistance.getCurrentRenderDistance();
+		int landRadius = renderDistanceManager.getCurrentRenderDistance();
 		int radius = rc.isOnWorldEntity() ? config.sailingRenderDistance() : landRadius;
 		int plane = rc.getWorldPoint().getPlane();
 		LocalPoint centerLp = renderBoundary.getRenderCenter(rc, radius, landRadius);

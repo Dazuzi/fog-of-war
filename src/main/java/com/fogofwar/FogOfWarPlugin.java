@@ -10,10 +10,10 @@ import com.fogofwar.fade.FadingPlayerOverlay;
 import com.fogofwar.lifecycle.OverlayToggle;
 import com.fogofwar.render.minimap.MinimapFogOverlay;
 import com.fogofwar.render.world.WorldFogOverlay;
+import com.fogofwar.actor.VisibleActorTracker;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.fogofwar.state.RenderDistanceManager;
-import com.fogofwar.actor.VisibleActorTracker;
 import com.google.inject.Provides;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
@@ -61,10 +61,10 @@ public class FogOfWarPlugin extends Plugin {
 	private FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
 	@Inject
 	@SuppressWarnings("unused")
-	private RenderDistanceManager dynamicRenderDistance;
+	private RenderDistanceManager renderDistanceManager;
 	@Inject
 	@SuppressWarnings("unused")
-	private AreaExclusionManager areaManager;
+	private AreaExclusionManager areaExclusionManager;
 	@Inject
 	@SuppressWarnings("unused")
 	private VisibleActorTracker visibleActorTracker;
@@ -91,8 +91,8 @@ public class FogOfWarPlugin extends Plugin {
 		worldOverlay.clearCaches();
 		minimapOverlay.clearCaches();
 		fadingPlayerManager.stop();
-		dynamicRenderDistance.stop();
-		areaManager.stop();
+		renderDistanceManager.stop();
+		areaExclusionManager.stop();
 		visibleActorTracker.stop();
 	}
 	private void initOverlayToggles() {
@@ -133,12 +133,12 @@ public class FogOfWarPlugin extends Plugin {
 		debugOverlayToggle.set(config.debugOverlayEnabled());
 		fadingPlayerOverlayToggle.set(fadingWorldActive);
 		fadingPlayerMinimapOverlayToggle.set(fadingMinimapActive);
-		if (renderDistanceActive) areaManager.start();
-		else areaManager.stop();
+		if (renderDistanceActive) areaExclusionManager.start();
+		else areaExclusionManager.stop();
 		if (fadingActive) fadingPlayerManager.start();
 		else fadingPlayerManager.stop();
-		if (config.dynamicRenderDistanceEnabled() && renderDistanceActive) dynamicRenderDistance.start();
-		else dynamicRenderDistance.stop();
+		if (config.dynamicRenderDistanceEnabled() && renderDistanceActive) renderDistanceManager.start();
+		else renderDistanceManager.stop();
 		if (worldActive && worldMode.showsFog() && config.actorCutoutLimit().isEnabled()) visibleActorTracker.start();
 		else visibleActorTracker.stop();
 	}
