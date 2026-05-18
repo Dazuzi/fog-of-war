@@ -13,6 +13,7 @@ import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 final class ActorCutoutMask {
@@ -34,6 +35,7 @@ final class ActorCutoutMask {
 	private final VisibleActorTracker visibleActorTracker;
 	private final ActorHullCache hullCache = new ActorHullCache();
 	private final List<ActorCutoutCandidate> exclusionCandidates = new ArrayList<>(256);
+	private boolean[] usedBuckets = new boolean[0];
 	private Rectangle viewport;
 	private int exclusionCandidateCount;
 	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
@@ -51,13 +53,15 @@ final class ActorCutoutMask {
 		this.viewport = viewport;
 		boolean all = limit == Integer.MAX_VALUE;
 		int bucketColumns = all ? 1 : Math.max(1, (viewport.width + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
-		collectExclusionCandidates(worldView, boundary, centerLp, plane, radius, !all, bucketColumns);
-		if (exclusionCandidateCount == 0) return;
-		if (all) subtractAllExclusionAreas(fogArea, boundary);
-		else {
-			exclusionCandidates.subList(0, exclusionCandidateCount).sort(EXCLUSION_CANDIDATE_ORDER);
-			subtractSelectedExclusionAreas(fogArea, boundary, limit, bucketColumns);
-		}
+		try {
+			collectExclusionCandidates(worldView, boundary, centerLp, plane, radius, !all, bucketColumns);
+			if (exclusionCandidateCount == 0) return;
+			if (all) subtractAllExclusionAreas(fogArea, boundary);
+			else {
+				exclusionCandidates.subList(0, exclusionCandidateCount).sort(EXCLUSION_CANDIDATE_ORDER);
+				subtractSelectedExclusionAreas(fogArea, boundary, limit, bucketColumns);
+			}
+		} finally { clearExclusionCandidates(); }
 	}
 	private void updateCameraState() {
 		lastCamX = client.getCameraX();
@@ -104,25 +108,23 @@ final class ActorCutoutMask {
 			int footprintRadius = Math.max(Perspective.LOCAL_TILE_SIZE, actor.getFootprintSize() * Perspective.LOCAL_TILE_SIZE / 2);
 			if (edgeDistance < -footprintRadius) continue;
 			Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
-			boolean insideViewport = canvasPoint != null && viewport.contains(canvasPoint.getX(), canvasPoint.getY());
-			if (!insideViewport) continue;
+			if (canvasPoint == null || !viewport.contains(canvasPoint.getX(), canvasPoint.getY())) continue;
+			int canvasX = canvasPoint.getX(), canvasY = canvasPoint.getY();
 			int bucket = -1, score = 0;
 			if (ranked) {
-				bucket = getExclusionBucket(canvasPoint, bucketColumns);
+				bucket = getExclusionBucket(canvasX, canvasY, bucketColumns);
 				score = getCandidateScore(actor, false, edgeDistance);
 			}
-			addExclusionCandidate(actor, cached, awp, anim, frame, pose, poseFrame, false, score, bucket, canvasPoint, localX, localY);
+			addExclusionCandidate(actor, cached, awp, anim, frame, pose, poseFrame, false, score, bucket, canvasX, canvasY, localX, localY);
 		}
 	}
 	private void addCachedExclusionCandidate(Actor actor, ActorHullCache.Entry cached, WorldPoint awp, int anim, int frame, int pose, int poseFrame, boolean ranked, int bucketColumns, LocalPoint centerLp, int localRadius) {
-		Point canvasPoint = null;
 		int bucket = -1, score = 0;
 		if (ranked) {
-			canvasPoint = new Point(cached.canvasX, cached.canvasY);
-			if (viewport.contains(canvasPoint.getX(), canvasPoint.getY())) bucket = getExclusionBucket(canvasPoint, bucketColumns);
+			if (viewport.contains(cached.canvasX, cached.canvasY)) bucket = getExclusionBucket(cached.canvasX, cached.canvasY, bucketColumns);
 			score = getCandidateScore(actor, true, getEdgeDistance(cached.localX, cached.localY, centerLp, localRadius));
 		}
-		addExclusionCandidate(actor, cached, awp, anim, frame, pose, poseFrame, true, score, bucket, canvasPoint, cached.localX, cached.localY);
+		addExclusionCandidate(actor, cached, awp, anim, frame, pose, poseFrame, true, score, bucket, cached.canvasX, cached.canvasY, cached.localX, cached.localY);
 	}
 	private int getEdgeDistance(int localX, int localY, LocalPoint centerLp, int localRadius) {
 		int dx = Math.abs(localX - centerLp.getX());
@@ -136,18 +138,20 @@ final class ActorCutoutMask {
 		if (hit) score -= Perspective.LOCAL_TILE_SIZE * 8;
 		return score;
 	}
-	private int getExclusionBucket(Point canvasPoint, int bucketColumns) {
-		int x = (canvasPoint.getX() - viewport.x) / ENTITY_EXCLUSION_BUCKET_SIZE;
-		int y = (canvasPoint.getY() - viewport.y) / ENTITY_EXCLUSION_BUCKET_SIZE;
+	private int getExclusionBucket(int canvasX, int canvasY, int bucketColumns) {
+		int x = (canvasX - viewport.x) / ENTITY_EXCLUSION_BUCKET_SIZE;
+		int y = (canvasY - viewport.y) / ENTITY_EXCLUSION_BUCKET_SIZE;
 		return y * bucketColumns + x;
 	}
-	private void addExclusionCandidate(Actor actor, ActorHullCache.Entry cached, WorldPoint awp, int anim, int frame, int pose, int poseFrame, boolean hit, int score, int bucket, Point canvasPoint, int localX, int localY) {
+	private void addExclusionCandidate(Actor actor, ActorHullCache.Entry cached, WorldPoint awp, int anim, int frame, int pose, int poseFrame, boolean hit, int score, int bucket, int canvasX, int canvasY, int localX, int localY) {
 		if (exclusionCandidateCount == exclusionCandidates.size()) exclusionCandidates.add(new ActorCutoutCandidate());
-		exclusionCandidates.get(exclusionCandidateCount++).set(actor, cached, awp, anim, frame, pose, poseFrame, hit, score, bucket, canvasPoint, localX, localY);
+		exclusionCandidates.get(exclusionCandidateCount++).set(actor, cached, awp, anim, frame, pose, poseFrame, hit, score, bucket, canvasX, canvasY, localX, localY);
 	}
 	private void subtractSelectedExclusionAreas(Area fogArea, GeneralPath boundary, int limit, int bucketColumns) {
 		int bucketRows = Math.max(1, (viewport.height + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
-		boolean[] usedBuckets = new boolean[bucketColumns * bucketRows];
+		int bucketCount = bucketColumns * bucketRows;
+		if (usedBuckets.length < bucketCount) usedBuckets = new boolean[bucketCount];
+		else Arrays.fill(usedBuckets, 0, bucketCount, false);
 		int selected = 0;
 		for (int pass = 0; pass < 2 && selected < limit; pass++) {
 			for (int i = 0; i < exclusionCandidateCount && selected < limit; i++) {
@@ -163,6 +167,10 @@ final class ActorCutoutMask {
 				selected++;
 			}
 		}
+	}
+	private void clearExclusionCandidates() {
+		for (int i = 0; i < exclusionCandidateCount; i++) exclusionCandidates.get(i).clear();
+		exclusionCandidateCount = 0;
 	}
 	private Area getCandidateArea(ActorCutoutCandidate candidate, GeneralPath boundary) {
 		ActorHullCache.Entry cached = candidate.cached;
