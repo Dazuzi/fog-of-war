@@ -31,17 +31,26 @@ public class RenderDistanceManager extends LifecycleComponent {
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
 		int maxRadius = config.landRenderDistance();
-		if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null || !config.dynamicRenderDistanceEnabled()) {
+		Player localPlayer = client.getLocalPlayer();
+		if (client.getGameState() != GameState.LOGGED_IN || localPlayer == null || !config.dynamicRenderDistanceEnabled()) {
 			this.currentRenderDistance = maxRadius;
 			return;
 		}
 		WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null) {
+			this.currentRenderDistance = maxRadius;
+			return;
+		}
 		int count = Players.count(worldView);
 		if (count < config.dynamicRenderDistanceThreshold()) {
 			this.currentRenderDistance = maxRadius;
 			return;
 		}
-		WorldPoint playerWp = client.getLocalPlayer().getWorldLocation();
+		WorldPoint playerWp = localPlayer.getWorldLocation();
+		if (playerWp == null) {
+			this.currentRenderDistance = maxRadius;
+			return;
+		}
 		int px = playerWp.getX(), py = playerWp.getY();
 		int maxDist = 0;
 		for (Player p : worldView.players()) {
@@ -49,8 +58,8 @@ public class RenderDistanceManager extends LifecycleComponent {
 			WorldPoint wp = p.getWorldLocation();
 			if (wp == null) continue;
 			int dist = Math.max(Math.abs(wp.getX() - px), Math.abs(wp.getY() - py));
-			if (dist > maxDist) maxDist = Math.min(dist, maxRadius);
+			if (dist > maxDist) maxDist = dist;
 		}
-		this.currentRenderDistance = Math.max(1, maxDist);
+		this.currentRenderDistance = Math.max(1, Math.min(maxDist, maxRadius));
 	}
 }

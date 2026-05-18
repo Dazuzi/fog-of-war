@@ -6,9 +6,9 @@ final class ActorCutoutCandidate {
 	Actor actor;
 	ActorHullCache.Entry cached;
 	WorldPoint worldPoint;
-	int anim, frame, pose, poseFrame, score, bucket, canvasX, canvasY, wx, wy;
+	int anim, frame, pose, poseFrame, score, bucket, canvasX, canvasY, localX, localY;
 	boolean hit, selected;
-	void set(Actor actor, ActorHullCache.Entry cached, WorldPoint worldPoint, int anim, int frame, int pose, int poseFrame, boolean hit, int score, int bucket, Point canvasPoint) {
+	void set(Actor actor, ActorHullCache.Entry cached, WorldPoint worldPoint, int anim, int frame, int pose, int poseFrame, boolean hit, int score, int bucket, Point canvasPoint, int localX, int localY) {
 		this.actor = actor;
 		this.cached = cached;
 		this.worldPoint = worldPoint;
@@ -21,8 +21,8 @@ final class ActorCutoutCandidate {
 		this.bucket = bucket;
 		this.canvasX = canvasPoint != null ? canvasPoint.getX() : Integer.MAX_VALUE;
 		this.canvasY = canvasPoint != null ? canvasPoint.getY() : Integer.MIN_VALUE;
-		this.wx = worldPoint.getX();
-		this.wy = worldPoint.getY();
+		this.localX = localX;
+		this.localY = localY;
 		this.selected = false;
 	}
 }

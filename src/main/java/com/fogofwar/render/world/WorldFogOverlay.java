@@ -45,27 +45,35 @@ public class WorldFogOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		actorCutouts.beginFrame();
-		if (clientState.isSuppressed(config, areaExclusionManager)) return null;
+		try {
+			renderFrame(graphics);
+		} finally {
+			actorCutouts.endFrame();
+		}
+		return null;
+	}
+	private void renderFrame(Graphics2D graphics) {
+		if (clientState.isSuppressed(config, areaExclusionManager)) return;
 		FogDisplayMode mode = config.worldDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
-		if (!showFog && !showBorder) return null;
+		if (!showFog && !showBorder) return;
 		RenderCenter rc = RenderCenter.resolve(client);
-		if (rc == null) return null;
+		if (rc == null) return;
 		WorldView worldView = rc.getWorldView();
 		int landRadius = renderDistanceManager.getCurrentRenderDistance();
 		int radius = rc.isOnWorldEntity() ? config.sailingRenderDistance() : landRadius;
 		int plane = rc.getWorldPoint().getPlane();
-		LocalPoint centerLp = renderBoundary.getRenderCenter(rc, radius, landRadius);
+		LocalPoint centerLp = rc.snappedCenter(radius, landRadius);
 		GeneralPath boundary = renderBoundary.createRenderAreaBoundary(worldView, centerLp, plane, radius);
 		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showWorldLandRenderDistanceWhileSailing() && landRadius < radius;
-		LocalPoint sailingLandCenterLp = showSailingLandRenderDistance ? renderBoundary.getRenderCenter(rc, landRadius, landRadius) : null;
+		LocalPoint sailingLandCenterLp = showSailingLandRenderDistance ? rc.snappedCenter(landRadius, landRadius) : null;
 		GeneralPath sailingLandBoundary = null;
 		if (showSailingLandRenderDistance) sailingLandBoundary = renderBoundary.createSailingLandRenderAreaBoundary(worldView, sailingLandCenterLp, plane, landRadius);
 		setViewportBounds();
 		if (boundary == null) {
 			if (showFog) fogMask.renderFullFog(graphics, viewport);
-			return null;
+			return;
 		}
 		if (showFog) {
 			fogMask.renderFog(graphics, viewport, worldView, boundary, centerLp, plane, radius, actorCutouts);
@@ -75,7 +83,6 @@ public class WorldFogOverlay extends Overlay {
 			fogMask.renderBorder(graphics, boundary);
 			if (sailingLandBoundary != null) fogMask.renderSailingLandBorder(graphics, sailingLandBoundary);
 		}
-		return null;
 	}
 	private void setViewportBounds() {
 		viewport.setBounds(client.getViewportXOffset(), client.getViewportYOffset(), client.getViewportWidth(), client.getViewportHeight());

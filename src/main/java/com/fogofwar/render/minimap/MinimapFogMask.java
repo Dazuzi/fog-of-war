@@ -1,6 +1,7 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.render.FogColour;
+import com.fogofwar.render.FogPathBuilder;
 import com.fogofwar.render.StrokeCache;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -17,23 +18,13 @@ final class MinimapFogMask {
 	void renderFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
 		Rectangle b = minimapClipShape.getBounds();
-		fogFillPath.reset();
-		fogFillPath.moveTo(b.x - 1, b.y - 1);
-		fogFillPath.lineTo(b.x + b.width + 1, b.y - 1);
-		fogFillPath.lineTo(b.x + b.width + 1, b.y + b.height + 1);
-		fogFillPath.lineTo(b.x - 1, b.y + b.height + 1);
-		fogFillPath.closePath();
-		fogFillPath.append(path, false);
+		FogPathBuilder.fill(fogFillPath, b, 1, path);
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogFillPath);
 	}
 	void renderBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		Stroke oldStroke = graphics.getStroke();
-		graphics.setColor(config.minimapBorderColour());
-		graphics.setStroke(borderStroke.get(config.minimapBorderThickness()));
-		graphics.draw(path);
-		graphics.setStroke(oldStroke);
+		drawBorder(graphics, path, config.minimapBorderColour());
 	}
 	void renderSailingExtendedFog(Graphics2D graphics, GeneralPath boundary, GeneralPath landBoundary) {
 		Area area = new Area(boundary);
@@ -44,8 +35,11 @@ final class MinimapFogMask {
 	}
 	void renderSailingLandBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
+		drawBorder(graphics, path, getSailingMinimapBorderColour());
+	}
+	private void drawBorder(Graphics2D graphics, GeneralPath path, Color color) {
 		Stroke oldStroke = graphics.getStroke();
-		graphics.setColor(getSailingMinimapBorderColour());
+		graphics.setColor(color);
 		graphics.setStroke(borderStroke.get(config.minimapBorderThickness()));
 		graphics.draw(path);
 		graphics.setStroke(oldStroke);

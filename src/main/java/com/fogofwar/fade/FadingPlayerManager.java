@@ -7,6 +7,7 @@ import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Player;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -49,7 +50,10 @@ public class FadingPlayerManager extends LifecycleComponent {
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
-		if (client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null) {
+		Player localPlayer = client.getLocalPlayer();
+		WorldView worldView = client.getTopLevelWorldView();
+		WorldPoint localPlayerLocation = localPlayer != null ? localPlayer.getWorldLocation() : null;
+		if (client.getGameState() != GameState.LOGGED_IN || localPlayer == null || worldView == null || localPlayerLocation == null) {
 			clearAllTracking();
 			return;
 		}
@@ -61,8 +65,8 @@ public class FadingPlayerManager extends LifecycleComponent {
 		int fadeDuration = config.fadeDurationTicks();
 		boolean extrapolate = config.predictMovement();
 		boolean onlyAtLimit = config.onlyFadeAtRenderEdge();
-		handleFadingPlayers(fadeDuration, extrapolate, renderDistance);
-		updatePlayerTracking(extrapolate, onlyAtLimit, renderDistance);
+		handleFadingPlayers(fadeDuration, extrapolate, renderDistance, localPlayerLocation);
+		updatePlayerTracking(extrapolate, onlyAtLimit, renderDistance, localPlayer, worldView, localPlayerLocation);
 	}
 	private void clearAllTracking() {
 		fadingPlayers.clear();
@@ -71,8 +75,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 		currentPlayerLocations.clear();
 		currentPlayerNames.clear();
 	}
-	private void handleFadingPlayers(int fadeDuration, boolean extrapolate, int renderDistance) {
-		WorldPoint localPlayerLocation = client.getLocalPlayer().getWorldLocation();
+	private void handleFadingPlayers(int fadeDuration, boolean extrapolate, int renderDistance, WorldPoint localPlayerLocation) {
 		fadingPlayers.entrySet().removeIf(entry -> {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
@@ -87,16 +90,15 @@ public class FadingPlayerManager extends LifecycleComponent {
 			return false;
 		});
 	}
-	private void updatePlayerTracking(boolean extrapolate, boolean onlyAtLimit, int renderDistance) {
+	private void updatePlayerTracking(boolean extrapolate, boolean onlyAtLimit, int renderDistance, Player localPlayer, WorldView worldView, WorldPoint localPlayerLocation) {
 		currentPlayerLocations.clear();
 		currentPlayerNames.clear();
-		for (Player player : client.getTopLevelWorldView().players()) {
-			if (player != null && player != client.getLocalPlayer()) {
-				currentPlayerLocations.put(player, player.getWorldLocation());
-				if (player.getName() != null) currentPlayerNames.add(player.getName());
-			}
+		for (Player player : worldView.players()) {
+			if (player == null || player == localPlayer) continue;
+			WorldPoint playerLocation = player.getWorldLocation();
+			if (playerLocation != null) currentPlayerLocations.put(player, playerLocation);
+			if (player.getName() != null) currentPlayerNames.add(player.getName());
 		}
-		WorldPoint currentLocalPlayerLocation = client.getLocalPlayer().getWorldLocation();
 		for (Map.Entry<Player, WorldPoint> entry : lastTickPlayerLocations.entrySet()) {
 			Player player = entry.getKey();
 			if (currentPlayerLocations.containsKey(player)) continue;
@@ -105,8 +107,8 @@ public class FadingPlayerManager extends LifecycleComponent {
 			if (lastLocation == null) continue;
 			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayerLocations.get(player);
 			WorldPoint velocity = predictor.getVelocity(lastLocation, twoTicksAgoLocation);
-			if (!predictor.shouldFade(lastLocation, currentLocalPlayerLocation, velocity, onlyAtLimit, renderDistance)) continue;
-			WorldPoint initialFadeLocation = predictor.getInitialFadeLocation(lastLocation, currentLocalPlayerLocation, velocity, extrapolate, renderDistance);
+			if (!predictor.shouldFade(lastLocation, localPlayerLocation, velocity, onlyAtLimit, renderDistance)) continue;
+			WorldPoint initialFadeLocation = predictor.getInitialFadeLocation(lastLocation, localPlayerLocation, velocity, extrapolate, renderDistance);
 			fadingPlayers.put(player, new FadingPlayer(player, velocity, initialFadeLocation));
 		}
 		Map<Player, WorldPoint> tmp = twoTicksAgoPlayerLocations;

@@ -48,7 +48,7 @@ final class MinimapClipProvider {
 			Rectangle b = (orb != null && !orb.isHidden()) ? orb.getBounds() : null;
 			currentOrbBounds[i] = b;
 			if (b == null) h ^= 0xDEADBEEFL;
-			else h ^= ((long) b.x << 48) ^ ((long) b.y << 32) ^ ((long) b.width << 16) ^ (b.height & 0xFFFFL);
+			else h ^= ((b.x & 0xFFFFL) << 48) ^ ((b.y & 0xFFFFL) << 32) ^ ((b.width & 0xFFFFL) << 16) ^ (b.height & 0xFFFFL);
 			h *= 1099511628211L;
 		}
 		return h;

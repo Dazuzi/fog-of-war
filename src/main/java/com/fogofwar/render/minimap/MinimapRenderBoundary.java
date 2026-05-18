@@ -11,8 +11,6 @@ import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
 final class MinimapRenderBoundary {
-	private static final int LOCAL_TILE_SIZE = 128;
-	private static final int HALF_TILE_OFFSET = 64;
 	private static final int MINIMAP_PROJECTION_DISTANCE = 32768;
 	private static final int MINIMAP_RENDER_AREA_PADDING = 1;
 	private final Client client;
@@ -25,17 +23,21 @@ final class MinimapRenderBoundary {
 		sailingLandRenderAreaPath.clear();
 	}
 	GeneralPath createRenderAreaPath(RenderCenter rc, int radius, int landRadius, Rectangle minimapBounds) {
-		LocalPoint centerLp = getRenderCenter(rc, radius, landRadius);
+		LocalPoint centerLp = rc.snappedCenter(radius, landRadius);
 		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, renderAreaPath);
 	}
 	GeneralPath createSailingLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
-		LocalPoint centerLp = getRenderCenter(rc, radius, radius);
+		LocalPoint centerLp = rc.snappedCenter(radius, radius);
 		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, sailingLandRenderAreaPath);
 	}
 	private GeneralPath createRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
-		WorldPoint centerWp = centerLp != null ? WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane()) : rc.getWorldPoint();
+		if (centerLp == null) {
+			boundaryPoints.clear();
+			return createClippedRenderAreaPath(boundaryPoints, minimapBounds, null, cache);
+		}
+		WorldPoint centerWp = WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane());
 		List<Point> points = getBoundaryPointsWithNulls(rc.getWorldView(), centerWp, centerLp, radius);
-		Point centerPoint = centerLp != null ? Perspective.localToMinimap(client, centerLp, MINIMAP_PROJECTION_DISTANCE) : null;
+		Point centerPoint = Perspective.localToMinimap(client, centerLp, MINIMAP_PROJECTION_DISTANCE);
 		return createClippedRenderAreaPath(points, minimapBounds, centerPoint, cache);
 	}
 	private GeneralPath createClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, MinimapPathCache cache) {
@@ -126,33 +128,28 @@ final class MinimapRenderBoundary {
 			path.lineTo((float) (centerX + radius * Math.cos(currentAngleRad)), (float) (centerY + radius * Math.sin(currentAngleRad)));
 		}
 	}
-	private LocalPoint getRenderCenter(RenderCenter rc, int radius, int landRadius) {
-		LocalPoint lp = rc.isOnWorldEntity() && radius > landRadius ? rc.getTargetLocalPoint() : rc.getLocalPoint();
-		if (lp == null) return null;
-		return new LocalPoint(snapAxis(lp.getX()), snapAxis(lp.getY()), rc.getWorldView());
-	}
 	private List<Point> getBoundaryPointsWithNulls(WorldView worldView, WorldPoint center, LocalPoint centerLp, int radius) {
 		boundaryPoints.clear();
 		if (centerLp == null) return boundaryPoints;
 		int sampleRate = Math.max(1, radius / 12);
-		addMinimapPoint(worldView, center, centerLp, -radius, -radius, -HALF_TILE_OFFSET, -HALF_TILE_OFFSET);
-		for (int x = -radius; x <= radius; x += sampleRate) addMinimapPoint(worldView, center, centerLp, x, -radius, 0, -HALF_TILE_OFFSET);
-		addMinimapPoint(worldView, center, centerLp, radius, -radius, HALF_TILE_OFFSET, -HALF_TILE_OFFSET);
-		for (int y = -radius; y <= radius; y += sampleRate) addMinimapPoint(worldView, center, centerLp, radius, y, HALF_TILE_OFFSET, 0);
-		addMinimapPoint(worldView, center, centerLp, radius, radius, HALF_TILE_OFFSET, HALF_TILE_OFFSET);
-		for (int x = radius; x >= -radius; x -= sampleRate) addMinimapPoint(worldView, center, centerLp, x, radius, 0, HALF_TILE_OFFSET);
-		addMinimapPoint(worldView, center, centerLp, -radius, radius, -HALF_TILE_OFFSET, HALF_TILE_OFFSET);
-		for (int y = radius; y >= -radius; y -= sampleRate) addMinimapPoint(worldView, center, centerLp, -radius, y, -HALF_TILE_OFFSET, 0);
+		int halfTile = Perspective.LOCAL_HALF_TILE_SIZE;
+		addMinimapPoint(worldView, center, centerLp, -radius, -radius, -halfTile, -halfTile);
+		for (int x = -radius; x <= radius; x += sampleRate) addMinimapPoint(worldView, center, centerLp, x, -radius, 0, -halfTile);
+		addMinimapPoint(worldView, center, centerLp, radius, -radius, halfTile, -halfTile);
+		for (int y = -radius; y <= radius; y += sampleRate) addMinimapPoint(worldView, center, centerLp, radius, y, halfTile, 0);
+		addMinimapPoint(worldView, center, centerLp, radius, radius, halfTile, halfTile);
+		for (int x = radius; x >= -radius; x -= sampleRate) addMinimapPoint(worldView, center, centerLp, x, radius, 0, halfTile);
+		addMinimapPoint(worldView, center, centerLp, -radius, radius, -halfTile, halfTile);
+		for (int y = radius; y >= -radius; y -= sampleRate) addMinimapPoint(worldView, center, centerLp, -radius, y, -halfTile, 0);
 		return boundaryPoints;
 	}
-	private static int snapAxis(int current) { return (current / LOCAL_TILE_SIZE) * LOCAL_TILE_SIZE + HALF_TILE_OFFSET; }
 	private void addMinimapPoint(WorldView worldView, WorldPoint centerWp, LocalPoint centerLp, int tileXOffset, int tileYOffset, int xOffset, int yOffset) {
 		if (!WorldPoint.isInScene(worldView, centerWp.getX() + tileXOffset, centerWp.getY() + tileYOffset)) {
 			boundaryPoints.add(null);
 			return;
 		}
-		int x = centerLp.getX() + tileXOffset * LOCAL_TILE_SIZE + xOffset;
-		int y = centerLp.getY() + tileYOffset * LOCAL_TILE_SIZE + yOffset;
+		int x = centerLp.getX() + tileXOffset * Perspective.LOCAL_TILE_SIZE + xOffset;
+		int y = centerLp.getY() + tileYOffset * Perspective.LOCAL_TILE_SIZE + yOffset;
 		boundaryPoints.add(Perspective.localToMinimap(client, new LocalPoint(x, y, worldView), MINIMAP_PROJECTION_DISTANCE));
 	}
 	private GeneralPath createFullMinimapCoveragePath(Rectangle minimapBounds, GeneralPath path) {

@@ -1,5 +1,6 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.fogofwar.render.minimap.MinimapWidgetProvider;
 import net.runelite.api.Client;
@@ -14,31 +15,37 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import javax.inject.Inject;
 import java.awt.*;
+import java.util.Collection;
 public class FadingPlayerMinimapOverlay extends Overlay {
 	private static final int DOT_SIZE = 4;
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final FadingPlayerManager manager;
+	private final AreaExclusionManager areaExclusionManager;
 	@Inject
-	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager) {
+	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, AreaExclusionManager areaExclusionManager) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.manager = manager;
+		this.areaExclusionManager = areaExclusionManager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_HIGH);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!config.playerFadeMarkerMode().showsMinimap() || clientState.isSuppressed(config)) return null;
+		if (!config.playerFadeMarkerMode().showsMinimap() || clientState.isSuppressed(config, areaExclusionManager)) return null;
+		Collection<FadingPlayer> fadingPlayers = manager.getFadingPlayers().values();
+		if (fadingPlayers.isEmpty()) return null;
+		WorldView wv = client.getTopLevelWorldView();
+		if (wv == null) return null;
 		Widget minimapWidget = MinimapWidgetProvider.getMinimapWidget(client);
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapWidget.getBounds());
-		WorldView wv = client.getTopLevelWorldView();
-		for (FadingPlayer fadingPlayer : manager.getFadingPlayers().values()) renderFadingPlayer(graphics, wv, fadingPlayer);
+		for (FadingPlayer fadingPlayer : fadingPlayers) renderFadingPlayer(graphics, wv, fadingPlayer);
 		graphics.setClip(oldClip);
 		return null;
 	}

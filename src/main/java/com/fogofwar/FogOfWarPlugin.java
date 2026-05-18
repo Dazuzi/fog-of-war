@@ -25,6 +25,7 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
+import java.util.List;
 @PluginDescriptor(
 		name = "Fog of War",
 		description = "Applies a fog of war effect outside of the player render distance, in both the world and on the minimap.",
@@ -35,9 +36,6 @@ public class FogOfWarPlugin extends Plugin {
 	@Inject
 	@SuppressWarnings("unused")
 	private FogOfWarConfig config;
-	@Inject
-	@SuppressWarnings("unused")
-	private ConfigManager configManager;
 	@Inject
 	@SuppressWarnings("unused")
 	private ClientState clientState;
@@ -76,6 +74,7 @@ public class FogOfWarPlugin extends Plugin {
 	private OverlayToggle debugOverlayToggle;
 	private OverlayToggle fadingPlayerOverlayToggle;
 	private OverlayToggle fadingPlayerMinimapOverlayToggle;
+	private List<OverlayToggle> overlayToggles = List.of();
 	@Override
 	protected void startUp() {
 		initOverlayToggles();
@@ -83,11 +82,7 @@ public class FogOfWarPlugin extends Plugin {
 	}
 	@Override
 	protected void shutDown() {
-		worldOverlayToggle.set(false);
-		minimapOverlayToggle.set(false);
-		debugOverlayToggle.set(false);
-		fadingPlayerOverlayToggle.set(false);
-		fadingPlayerMinimapOverlayToggle.set(false);
+		for (OverlayToggle overlayToggle : overlayToggles) overlayToggle.set(false);
 		worldOverlay.clearCaches();
 		minimapOverlay.clearCaches();
 		fadingPlayerManager.stop();
@@ -101,6 +96,7 @@ public class FogOfWarPlugin extends Plugin {
 		debugOverlayToggle = new OverlayToggle(overlayManager, debugOverlay);
 		fadingPlayerOverlayToggle = new OverlayToggle(overlayManager, fadingPlayerOverlay);
 		fadingPlayerMinimapOverlayToggle = new OverlayToggle(overlayManager, fadingPlayerMinimapOverlay);
+		overlayToggles = List.of(worldOverlayToggle, minimapOverlayToggle, debugOverlayToggle, fadingPlayerOverlayToggle, fadingPlayerMinimapOverlayToggle);
 	}
 	@Subscribe
 	@SuppressWarnings("unused")

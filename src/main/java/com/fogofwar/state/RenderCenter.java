@@ -1,6 +1,7 @@
 package com.fogofwar.state;
 import lombok.Value;
 import net.runelite.api.Client;
+import net.runelite.api.Perspective;
 import net.runelite.api.Player;
 import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
@@ -13,7 +14,6 @@ public class RenderCenter {
 	LocalPoint localPoint;
 	LocalPoint targetLocalPoint;
 	boolean onWorldEntity;
-	int playerWorldViewId;
 	public static RenderCenter resolve(Client client) {
 		Player p = client.getLocalPlayer();
 		if (p == null) return null;
@@ -24,7 +24,7 @@ public class RenderCenter {
 			WorldPoint wp = p.getWorldLocation();
 			LocalPoint lp = wp != null ? LocalPoint.fromWorld(topWv, wp) : null;
 			if (wp == null || lp == null) return null;
-			return new RenderCenter(topWv, wp, lp, lp, false, pwv != null ? pwv.getId() : topWv.getId());
+			return new RenderCenter(topWv, wp, lp, lp, false);
 		}
 		WorldEntity we = topWv.worldEntities().byIndex(pwv.getId());
 		if (we == null) return null;
@@ -33,6 +33,12 @@ public class RenderCenter {
 		LocalPoint boatTarget = we.getTargetLocation();
 		if (boatTarget == null) boatTarget = boatLp;
 		WorldPoint boatWp = WorldPoint.fromLocal(topWv, boatLp.getX(), boatLp.getY(), topWv.getPlane());
-		return new RenderCenter(topWv, boatWp, boatLp, boatTarget, true, pwv.getId());
+		return new RenderCenter(topWv, boatWp, boatLp, boatTarget, true);
 	}
+	public LocalPoint snappedCenter(int radius, int landRadius) {
+		LocalPoint lp = onWorldEntity && radius > landRadius ? targetLocalPoint : localPoint;
+		if (lp == null) return null;
+		return new LocalPoint(snapAxis(lp.getX()), snapAxis(lp.getY()), worldView);
+	}
+	private static int snapAxis(int current) { return (current / Perspective.LOCAL_TILE_SIZE) * Perspective.LOCAL_TILE_SIZE + Perspective.LOCAL_HALF_TILE_SIZE; }
 }
