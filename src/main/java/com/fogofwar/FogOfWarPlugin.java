@@ -85,6 +85,7 @@ public class FogOfWarPlugin extends Plugin {
 		for (OverlayToggle overlayToggle : overlayToggles) overlayToggle.set(false);
 		worldOverlay.clearCaches();
 		minimapOverlay.clearCaches();
+		debugOverlay.stop();
 		fadingPlayerManager.stop();
 		renderDistanceManager.stop();
 		areaExclusionManager.stop();
@@ -127,6 +128,8 @@ public class FogOfWarPlugin extends Plugin {
 		worldOverlayToggle.set(worldActive);
 		minimapOverlayToggle.set(minimapActive);
 		debugOverlayToggle.set(config.debugOverlayEnabled());
+		if (config.debugOverlayEnabled()) debugOverlay.start();
+		else debugOverlay.stop();
 		fadingPlayerOverlayToggle.set(fadingWorldActive);
 		fadingPlayerMinimapOverlayToggle.set(fadingMinimapActive);
 		if (renderDistanceActive) areaExclusionManager.start();

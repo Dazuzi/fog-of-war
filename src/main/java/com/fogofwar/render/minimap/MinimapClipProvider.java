@@ -7,6 +7,9 @@ import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.Ellipse2D;
 import java.util.Arrays;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+@Singleton
 public final class MinimapClipProvider {
 	private static final int RESIZED_MINIMAP_CLIP_PADDING = 1;
 	private static final int FIXED_MINIMAP_CLIP_PADDING = 3;
@@ -17,6 +20,7 @@ public final class MinimapClipProvider {
 	private Shape cachedClipShape;
 	private long cachedOrbsHash;
 	private boolean cachedResized;
+	@Inject
 	public MinimapClipProvider(Client client) { this.client = client; }
 	void clearCaches() {
 		cachedMinimapBounds = null;

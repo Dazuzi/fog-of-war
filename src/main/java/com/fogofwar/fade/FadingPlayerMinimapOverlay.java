@@ -26,13 +26,13 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 	private final AreaExclusionManager areaExclusionManager;
 	private final MinimapClipProvider clipProvider;
 	@Inject
-	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, AreaExclusionManager areaExclusionManager) {
+	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, AreaExclusionManager areaExclusionManager, MinimapClipProvider clipProvider) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.manager = manager;
 		this.areaExclusionManager = areaExclusionManager;
-		this.clipProvider = new MinimapClipProvider(client);
+		this.clipProvider = clipProvider;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_HIGH);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
@@ -48,9 +48,10 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(clipProvider.getClipShape(minimapWidget));
-		for (FadingPlayer fadingPlayer : fadingPlayers) renderFadingPlayer(graphics, wv, fadingPlayer);
-		graphics.setClip(oldClip);
-		return null;
+		try {
+			for (FadingPlayer fadingPlayer : fadingPlayers) renderFadingPlayer(graphics, wv, fadingPlayer);
+			return null;
+		} finally { graphics.setClip(oldClip); }
 	}
 	private void renderFadingPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
 		WorldPoint wp = fadingPlayer.getLastLocation();
@@ -59,7 +60,7 @@ public class FadingPlayerMinimapOverlay extends Overlay {
 		Point mp = Perspective.localToMinimap(client, lp);
 		if (mp == null) return;
 		Color color = fadingPlayer.getColor(config);
-		Color shadedColor = color.darker();
+		Color shadedColor = fadingPlayer.getDarkerColor(config);
 		int x = mp.getX() - DOT_SIZE / 2;
 		int y = mp.getY() - DOT_SIZE / 2 + 1;
 		graphics.setColor(shadedColor);
