@@ -13,6 +13,7 @@ import net.runelite.api.Point;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
@@ -31,31 +32,29 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	private final ClientState clientState;
 	private final DynamicRenderDistance dynamicRenderDistance;
 	private final AreaManager areaManager;
-	private static final int ORB_GROUP_ID = 160;
-	private static final int HEALTH_ORB_BACKING_CHILD_ID = 8;
-	private static final int PRAYER_ORB_BACKING_CHILD_ID = 19;
-	private static final int RUN_ORB_BACKING_CHILD_ID = 27;
-	private static final int SPEC_ORB_BACKING_CHILD_ID = 35;
-	private static final int WORLD_MAP_ORB_CHILD_ID = 49;
 	private static final int LOCAL_TILE_SIZE = 128;
 	private static final int HALF_TILE_OFFSET = 64;
 	private static final int MINIMAP_PROJECTION_DISTANCE = 32768;
 	private static final int MINIMAP_RENDER_AREA_PADDING = 1;
 	private static final int RESIZED_MINIMAP_CLIP_PADDING = 1;
 	private static final int FIXED_MINIMAP_CLIP_PADDING = 3;
-	private static final int[] ORB_CHILD_IDS = {HEALTH_ORB_BACKING_CHILD_ID, PRAYER_ORB_BACKING_CHILD_ID, RUN_ORB_BACKING_CHILD_ID, SPEC_ORB_BACKING_CHILD_ID, WORLD_MAP_ORB_CHILD_ID};
+	private static final int SAILING_LAND_ALPHA_FLOOR = 32;
+	private static final int[] ORB_WIDGETS = {InterfaceID.Orbs.HEALTH_BACKING, InterfaceID.Orbs.PRAYER_BACKING, InterfaceID.Orbs.RUNENERGY_BACKING, InterfaceID.Orbs.SPECENERGY_BACKING, InterfaceID.Orbs.ORB_WORLDMAP};
 	private final List<Point> boundaryPoints = new ArrayList<>(128);
-	private final GeneralPath renderAreaPath = new GeneralPath();
-	private final GeneralPath lastRenderAreaPath = new GeneralPath();
-	private final GeneralPath fullMinimapCoveragePath = new GeneralPath();
+	private final PathCache renderAreaPath = new PathCache();
+	private final PathCache sailingLandRenderAreaPath = new PathCache();
 	private final GeneralPath fogFillPath = new GeneralPath(GeneralPath.WIND_EVEN_ODD);
 	private final CachedStroke borderStroke = new CachedStroke();
-	private final Rectangle[] currentOrbBounds = new Rectangle[ORB_CHILD_IDS.length];
+	private final Rectangle[] currentOrbBounds = new Rectangle[ORB_WIDGETS.length];
 	private Rectangle cachedMinimapBounds;
 	private Shape cachedClipShape;
 	private long cachedOrbsHash;
 	private boolean cachedResized;
-	private boolean hasLastRenderAreaPath;
+	private static class PathCache {
+		final GeneralPath path = new GeneralPath();
+		final GeneralPath lastPath = new GeneralPath();
+		boolean hasLastPath;
+	}
 	@Inject
 	public FogOfWarMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, DynamicRenderDistance dynamicRenderDistance, AreaManager areaManager) {
 		this.client = client;
@@ -71,7 +70,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		cachedMinimapBounds = null;
 		cachedClipShape = null;
 		cachedOrbsHash = 0;
-		hasLastRenderAreaPath = false;
+		renderAreaPath.hasLastPath = false;
+		sailingLandRenderAreaPath.hasLastPath = false;
 		Arrays.fill(currentOrbBounds, null);
 	}
 	@Override
@@ -94,13 +94,26 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		WorldPoint centerWp = centerLp != null ? WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane()) : rc.getWorldPoint();
 		List<Point> points = getBoundaryPointsWithNulls(rc.getWorldView(), centerWp, centerLp, radius);
 		Point centerPoint = centerLp != null ? Perspective.localToMinimap(client, centerLp, MINIMAP_PROJECTION_DISTANCE) : null;
-		GeneralPath fogPath = createClippedRenderAreaPath(points, minimap.getBounds(), centerPoint);
+		GeneralPath fogPath = createClippedRenderAreaPath(points, minimap.getBounds(), centerPoint, renderAreaPath);
 		if (fogPath == null) {
 			graphics.setClip(oldClip);
 			return null;
 		}
+		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showMinimapSailingLandRenderDistance() && landRadius < radius;
+		GeneralPath sailingLandPath = null;
+		if (showSailingLandRenderDistance) {
+			LocalPoint sailingLandCenterLp = getRenderCenter(rc, landRadius, landRadius);
+			WorldPoint sailingLandCenterWp = sailingLandCenterLp != null ? WorldPoint.fromLocal(rc.getWorldView(), sailingLandCenterLp.getX(), sailingLandCenterLp.getY(), rc.getWorldPoint().getPlane()) : rc.getWorldPoint();
+			List<Point> sailingLandPoints = getBoundaryPointsWithNulls(rc.getWorldView(), sailingLandCenterWp, sailingLandCenterLp, landRadius);
+			Point sailingLandCenterPoint = sailingLandCenterLp != null ? Perspective.localToMinimap(client, sailingLandCenterLp, MINIMAP_PROJECTION_DISTANCE) : null;
+			sailingLandPath = createClippedRenderAreaPath(sailingLandPoints, minimap.getBounds(), sailingLandCenterPoint, sailingLandRenderAreaPath);
+		}
 		if (showFog) renderMinimapFog(graphics, minimapClipShape, fogPath);
-		if (showBorder) renderMinimapBorder(graphics, minimapClipShape, fogPath);
+		if (showFog && sailingLandPath != null) renderSailingExtendedFog(graphics, fogPath, sailingLandPath);
+		if (showBorder) {
+			renderMinimapBorder(graphics, minimapClipShape, fogPath);
+			if (sailingLandPath != null) renderSailingLandBorder(graphics, minimapClipShape, sailingLandPath);
+		}
 		graphics.setClip(oldClip);
 		return null;
 	}
@@ -123,8 +136,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 	private static Area createEllipse(Rectangle bounds, int padding) { return new Area(new Ellipse2D.Double(bounds.getX() - padding, bounds.getY() - padding, bounds.getWidth() + padding * 2, bounds.getHeight() + padding * 2)); }
 	private long collectOrbBoundsAndHash() {
 		long h = 1469598103934665603L;
-		for (int i = 0; i < ORB_CHILD_IDS.length; i++) {
-			Widget orb = client.getWidget(ORB_GROUP_ID, ORB_CHILD_IDS[i]);
+		for (int i = 0; i < ORB_WIDGETS.length; i++) {
+			Widget orb = client.getWidget(ORB_WIDGETS[i]);
 			Rectangle b = (orb != null && !orb.isHidden()) ? orb.getBounds() : null;
 			currentOrbBounds[i] = b;
 			if (b == null) h ^= 0xDEADBEEFL;
@@ -154,23 +167,49 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogFillPath);
 	}
-	private GeneralPath createClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint) {
-		GeneralPath path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, false);
-		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path);
-		path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, true);
-		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path);
-		return hasLastRenderAreaPath ? lastRenderAreaPath : path;
+	private void renderSailingExtendedFog(Graphics2D graphics, GeneralPath boundary, GeneralPath landBoundary) {
+		Area area = new Area(boundary);
+		area.subtract(new Area(landBoundary));
+		if (area.isEmpty()) return;
+		graphics.setColor(getSailingMinimapFogColour());
+		graphics.fill(area);
+	}
+	private Color getSailingMinimapFogColour() {
+		Color colour = config.minimapFogColour();
+		return getSailingLandColour(colour);
+	}
+	private void renderSailingLandBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
+		if (path.contains(minimapClipShape.getBounds2D())) return;
+		Stroke oldStroke = graphics.getStroke();
+		graphics.setColor(getSailingMinimapBorderColour());
+		graphics.setStroke(borderStroke.get(config.minimapBorderThickness()));
+		graphics.draw(path);
+		graphics.setStroke(oldStroke);
+	}
+	private Color getSailingMinimapBorderColour() {
+		Color colour = config.minimapBorderColour();
+		return getSailingLandColour(colour);
+	}
+	private Color getSailingLandColour(Color colour) {
+		return new Color(colour.getRed(), colour.getGreen(), colour.getBlue(), Math.max(SAILING_LAND_ALPHA_FLOOR, colour.getAlpha() / 2));
+	}
+	private GeneralPath createClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, PathCache cache) {
+		GeneralPath path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, false, cache.path);
+		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path, cache);
+		path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, true, cache.path);
+		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path, cache);
+		return cache.hasLastPath ? cache.lastPath : path;
 	}
 	private boolean isValidRenderAreaPath(GeneralPath path, Point centerPoint) { return path == null || centerPoint == null || path.contains(centerPoint.getX(), centerPoint.getY()); }
-	private GeneralPath saveValidPath(GeneralPath path) {
+	private GeneralPath saveValidPath(GeneralPath path, PathCache cache) {
 		if (path != null) {
-			lastRenderAreaPath.reset();
-			lastRenderAreaPath.append(path, false);
-			hasLastRenderAreaPath = true;
+			cache.lastPath.reset();
+			cache.lastPath.append(path, false);
+			cache.hasLastPath = true;
 		}
 		return path;
 	}
-	private GeneralPath buildClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, boolean reverseArc) {
+	private GeneralPath buildClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, boolean reverseArc, GeneralPath path) {
 		int n = points.size();
 		int firstVisible = -1;
 		int visibleCount = 0;
@@ -180,8 +219,7 @@ public class FogOfWarMinimapOverlay extends Overlay {
 				visibleCount++;
 			}
 		}
-		if (visibleCount == 0) return createFullMinimapCoveragePath(minimapBounds);
-		GeneralPath path = renderAreaPath;
+		if (visibleCount == 0) return createFullMinimapCoveragePath(minimapBounds, path);
 		path.reset();
 		if (visibleCount == n) {
 			Point first = padRenderAreaPoint(points.get(0), minimapBounds, centerPoint);
@@ -272,8 +310,8 @@ public class FogOfWarMinimapOverlay extends Overlay {
 		int y = centerLp.getY() + tileYOffset * LOCAL_TILE_SIZE + yOffset;
 		boundaryPoints.add(Perspective.localToMinimap(client, new LocalPoint(x, y, worldView), MINIMAP_PROJECTION_DISTANCE));
 	}
-	private GeneralPath createFullMinimapCoveragePath(Rectangle minimapBounds) {
-		fullMinimapCoveragePath.reset();
+	private GeneralPath createFullMinimapCoveragePath(Rectangle minimapBounds, GeneralPath path) {
+		path.reset();
 		double centerX = minimapBounds.getCenterX();
 		double centerY = minimapBounds.getCenterY();
 		double radius = Math.max(minimapBounds.width, minimapBounds.height);
@@ -282,10 +320,10 @@ public class FogOfWarMinimapOverlay extends Overlay {
 			double angle = 2 * Math.PI * i / numSegments;
 			double x = centerX + radius * Math.cos(angle);
 			double y = centerY + radius * Math.sin(angle);
-			if (i == 0) fullMinimapCoveragePath.moveTo(x, y);
-			else fullMinimapCoveragePath.lineTo(x, y);
+			if (i == 0) path.moveTo(x, y);
+			else path.lineTo(x, y);
 		}
-		fullMinimapCoveragePath.closePath();
-		return fullMinimapCoveragePath;
+		path.closePath();
+		return path;
 	}
 }

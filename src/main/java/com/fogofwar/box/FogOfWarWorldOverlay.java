@@ -20,6 +20,7 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import javax.inject.Inject;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -38,6 +39,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private static final int ENTITY_EXCLUSION_BUCKET_SIZE = 48;
 	private static final int LOCAL_TILE_SIZE = 128;
 	private static final int HALF_TILE_SIZE = 64;
+	private static final int SAILING_LAND_ALPHA_FLOOR = 32;
 	private static final Comparator<ExclusionCandidate> EXCLUSION_CANDIDATE_ORDER = (a, b) -> {
 		int c = Integer.compare(a.score, b.score);
 		if (c != 0) return c;
@@ -60,6 +62,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 	private final Rectangle viewport = new Rectangle();
 	private final List<Point> boundaryPoints = new ArrayList<>(256);
 	private final GeneralPath renderAreaBoundary = new GeneralPath();
+	private final GeneralPath sailingLandRenderAreaBoundary = new GeneralPath();
 	private final GeneralPath fogPath = new GeneralPath(GeneralPath.WIND_EVEN_ODD);
 	private final CachedStroke borderStroke = new CachedStroke();
 	private static class ExclusionCandidate {
@@ -128,8 +131,12 @@ public class FogOfWarWorldOverlay extends Overlay {
 		WorldView worldView = rc.getWorldView();
 		int landRadius = dynamicRenderDistance.getCurrentRenderDistance();
 		int radius = rc.isOnWorldEntity() ? config.boatRenderDistanceRadius() : landRadius;
+		int plane = rc.getWorldPoint().getPlane();
 		LocalPoint centerLp = getRenderCenter(rc, radius, landRadius);
-		GeneralPath boundary = createRenderAreaBoundary(worldView, centerLp, rc.getWorldPoint().getPlane(), radius);
+		GeneralPath boundary = createRenderAreaBoundary(worldView, centerLp, plane, radius);
+		boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showSailingLandRenderDistance() && landRadius < radius;
+		LocalPoint sailingLandCenterLp = showSailingLandRenderDistance ? getRenderCenter(rc, landRadius, landRadius) : null;
+		GeneralPath sailingLandBoundary = showSailingLandRenderDistance ? createSailingLandRenderAreaBoundary(worldView, sailingLandCenterLp, plane, landRadius) : null;
 		setViewportBounds();
 		if (boundary == null) {
 			if (showFog) {
@@ -138,8 +145,14 @@ public class FogOfWarWorldOverlay extends Overlay {
 			}
 			return null;
 		}
-		if (showFog) renderWorldFog(graphics, worldView, boundary, centerLp, rc.getWorldPoint().getPlane(), radius);
-		if (showBorder) renderWorldBorder(graphics, boundary);
+		if (showFog) {
+			renderWorldFog(graphics, worldView, boundary, centerLp, plane, radius);
+			if (sailingLandBoundary != null) renderSailingExtendedFog(graphics, worldView, boundary, sailingLandBoundary, sailingLandCenterLp, plane, landRadius);
+		}
+		if (showBorder) {
+			renderWorldBorder(graphics, boundary);
+			if (sailingLandBoundary != null) renderSailingLandBorder(graphics, sailingLandBoundary);
+		}
 		return null;
 	}
 	private void setViewportBounds() {
@@ -304,12 +317,49 @@ public class FogOfWarWorldOverlay extends Overlay {
 		graphics.draw(boundary);
 		graphics.setStroke(oldStroke);
 	}
+	private void renderSailingExtendedFog(Graphics2D graphics, WorldView worldView, GeneralPath boundary, GeneralPath landBoundary, LocalPoint centerLp, int plane, int radius) {
+		Area area = new Area(boundary);
+		area.subtract(new Area(landBoundary));
+		if (area.isEmpty()) return;
+		EntityExclusionLimit exclusionLimit = config.entityExclusionLimit();
+		if (exclusionLimit.isEnabled()) {
+			Area result = buildExclusion(worldView, landBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
+			if (result != null) area.subtract(result);
+		}
+		if (area.isEmpty()) return;
+		graphics.setColor(getSailingExtendedFogColour());
+		graphics.fill(area);
+	}
+	private Color getSailingExtendedFogColour() {
+		Color colour = config.worldFogColour();
+		return getSailingLandColour(colour);
+	}
+	private void renderSailingLandBorder(Graphics2D graphics, GeneralPath boundary) {
+		Stroke oldStroke = graphics.getStroke();
+		graphics.setColor(getSailingLandBorderColour());
+		graphics.setStroke(borderStroke.get(config.worldBorderThickness()));
+		graphics.draw(boundary);
+		graphics.setStroke(oldStroke);
+	}
+	private Color getSailingLandBorderColour() {
+		Color colour = config.worldBorderColour();
+		return getSailingLandColour(colour);
+	}
+	private Color getSailingLandColour(Color colour) {
+		return new Color(colour.getRed(), colour.getGreen(), colour.getBlue(), Math.max(SAILING_LAND_ALPHA_FLOOR, colour.getAlpha() / 2));
+	}
 	private LocalPoint getRenderCenter(RenderCenter rc, int radius, int landRadius) {
 		LocalPoint lp = rc.isOnWorldEntity() && radius > landRadius ? rc.getTargetLocalPoint() : rc.getLocalPoint();
 		if (lp == null) return null;
 		return new LocalPoint(snapAxis(lp.getX()), snapAxis(lp.getY()), rc.getWorldView());
 	}
 	private GeneralPath createRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
+		return createRenderAreaBoundary(worldView, centerLp, plane, radius, renderAreaBoundary);
+	}
+	private GeneralPath createSailingLandRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
+		return createRenderAreaBoundary(worldView, centerLp, plane, radius, sailingLandRenderAreaBoundary);
+	}
+	private GeneralPath createRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius, GeneralPath path) {
 		if (centerLp == null) return null;
 		boundaryPoints.clear();
 		int localRadius = radius * LOCAL_TILE_SIZE + HALF_TILE_SIZE;
@@ -323,7 +373,7 @@ public class FogOfWarWorldOverlay extends Overlay {
 		for (int i = 0; i < sampleCount; i++) addPoint(worldView, boundaryPoints, maxX, maxY - i * step, plane);
 		for (int i = 0; i < sampleCount; i++) addPoint(worldView, boundaryPoints, maxX - i * step, minY, plane);
 		for (int i = 0; i < sampleCount; i++) addPoint(worldView, boundaryPoints, minX, minY + i * step, plane);
-		return createPathFromPoints(boundaryPoints);
+		return createPathFromPoints(boundaryPoints, path);
 	}
 	private static int snapAxis(int current) { return (current / LOCAL_TILE_SIZE) * LOCAL_TILE_SIZE + HALF_TILE_SIZE; }
 	private void addPoint(WorldView worldView, List<Point> points, int localX, int localY, int plane) {
@@ -331,16 +381,16 @@ public class FogOfWarWorldOverlay extends Overlay {
 		Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
 		if (canvasPoint != null) points.add(canvasPoint);
 	}
-	private GeneralPath createPathFromPoints(List<Point> points) {
+	private GeneralPath createPathFromPoints(List<Point> points, GeneralPath path) {
 		if (points.size() < 3) return null;
-		renderAreaBoundary.reset();
+		path.reset();
 		Point first = points.get(0);
-		renderAreaBoundary.moveTo(first.getX(), first.getY());
+		path.moveTo(first.getX(), first.getY());
 		for (int i = 1; i < points.size(); i++) {
 			Point point = points.get(i);
-			renderAreaBoundary.lineTo(point.getX(), point.getY());
+			path.lineTo(point.getX(), point.getY());
 		}
-		renderAreaBoundary.closePath();
-		return renderAreaBoundary;
+		path.closePath();
+		return path;
 	}
 }

@@ -66,7 +66,15 @@ public interface FogOfWarConfig extends Config {
 			section = worldSection,
 			position = 4
 	)
-	default EntityExclusionLimit entityExclusionLimit() { return EntityExclusionLimit.NONE; }
+	default EntityExclusionLimit entityExclusionLimit() { return EntityExclusionLimit.LIMIT_64; }
+	@ConfigItem(
+			keyName = "showSailingLandRenderDistance",
+			name = "Land range while sailing",
+			description = "Shows the normal land render distance while sailing.",
+			section = worldSection,
+			position = 5
+	)
+	default boolean showSailingLandRenderDistance() { return false; }
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",
@@ -108,6 +116,14 @@ public interface FogOfWarConfig extends Config {
 			position = 3
 	)
 	default int minimapBorderThickness() { return 1; }
+	@ConfigItem(
+			keyName = "showMinimapSailingLandRenderDistance",
+			name = "Land range while sailing",
+			description = "Shows the normal land render distance while sailing.",
+			section = minimapSection,
+			position = 4
+	)
+	default boolean showMinimapSailingLandRenderDistance() { return false; }
 	@ConfigSection(
 			name = "Fading Players",
 			description = "Settings for marking players that leave render distance",
