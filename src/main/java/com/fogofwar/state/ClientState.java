@@ -12,6 +12,6 @@ public class ClientState {
 	public ClientState(Client client) { this.client = client; }
 	public boolean isNotInWilderness() { return client.getVarbitValue(VarbitID.INSIDE_WILDERNESS) != 1; }
 	public boolean isClientNotReady() { return client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null; }
-	public boolean isSuppressed(FogOfWarConfig config) { return isClientNotReady() || (config.onlyInWilderness() && isNotInWilderness()); }
+	private boolean isSuppressed(FogOfWarConfig config) { return isClientNotReady() || (config.onlyInWilderness() && isNotInWilderness()); }
 	public boolean isSuppressed(FogOfWarConfig config, AreaExclusionManager areaExclusionManager) { return areaExclusionManager.isPlayerInExcludedArea() || isSuppressed(config); }
 }

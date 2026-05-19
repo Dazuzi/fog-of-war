@@ -1,4 +1,5 @@
 package com.fogofwar.render.world;
+import com.fogofwar.render.RenderAreaType;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;
@@ -13,13 +14,11 @@ final class WorldRenderBoundary {
 	private final GeneralPath seaRenderAreaBoundary = new GeneralPath();
 	private final GeneralPath landRenderAreaBoundary = new GeneralPath();
 	WorldRenderBoundary(Client client) { this.client = client; }
-	GeneralPath createSeaRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
-		return createRenderAreaBoundary(worldView, centerLp, plane, radius, seaRenderAreaBoundary);
+	GeneralPath createRenderAreaBoundary(RenderAreaType type, WorldView worldView, LocalPoint centerLp, int plane, int radius) {
+		return buildRenderAreaBoundary(worldView, centerLp, plane, radius, getPath(type));
 	}
-	GeneralPath createLandRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
-		return createRenderAreaBoundary(worldView, centerLp, plane, radius, landRenderAreaBoundary);
-	}
-	private GeneralPath createRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius, GeneralPath path) {
+	private GeneralPath getPath(RenderAreaType type) { return type == RenderAreaType.SEA ? seaRenderAreaBoundary : landRenderAreaBoundary; }
+	private GeneralPath buildRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius, GeneralPath path) {
 		if (centerLp == null) return null;
 		boundaryPoints.clear();
 		int localRadius = radius * Perspective.LOCAL_TILE_SIZE + Perspective.LOCAL_HALF_TILE_SIZE;

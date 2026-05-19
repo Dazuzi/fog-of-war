@@ -1,15 +1,13 @@
 package com.fogofwar.render.world;
 import com.fogofwar.config.EntityExclusionLimit;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.render.FogColour;
+import com.fogofwar.render.FogMaskRenderer;
 import com.fogofwar.render.FogPathBuilder;
 import com.fogofwar.render.StrokeCache;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 final class WorldFogMask {
@@ -35,31 +33,18 @@ final class WorldFogMask {
 		graphics.fill(viewport);
 	}
 	void renderBorder(Graphics2D graphics, GeneralPath boundary) {
-		drawBorder(graphics, boundary, config.worldBorderColour());
+		FogMaskRenderer.drawBorder(graphics, boundary, config.worldBorderColour(), borderStroke, config.worldBorderThickness());
 	}
 	void renderSailingSeaFog(Graphics2D graphics, Rectangle viewport, WorldView worldView, GeneralPath boundary, GeneralPath innerBoundary, LocalPoint centerLp, int plane, int radius, ActorCutoutMask actorCutouts) {
-		renderSailingExtendedFog(graphics, viewport, worldView, boundary, innerBoundary, centerLp, plane, radius, actorCutouts, getSailingSeaFogColour());
-	}
-	private void renderSailingExtendedFog(Graphics2D graphics, Rectangle viewport, WorldView worldView, GeneralPath boundary, GeneralPath innerBoundary, LocalPoint centerLp, int plane, int radius, ActorCutoutMask actorCutouts, Color color) {
-		Area area = new Area(boundary);
-		area.subtract(new Area(innerBoundary));
+		Area area = FogMaskRenderer.createDifferenceArea(boundary, innerBoundary);
 		if (area.isEmpty()) return;
 		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
 		if (exclusionLimit.isEnabled()) actorCutouts.subtractExclusions(area, viewport, worldView, innerBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
 		if (area.isEmpty()) return;
-		graphics.setColor(color);
+		graphics.setColor(FogMaskRenderer.sailingSea(config.worldFogColour()));
 		graphics.fill(area);
 	}
 	void renderSailingSeaBorder(Graphics2D graphics, GeneralPath boundary) {
-		drawBorder(graphics, boundary, getSailingSeaBorderColour());
+		FogMaskRenderer.drawBorder(graphics, boundary, FogMaskRenderer.sailingSea(config.worldBorderColour()), borderStroke, config.worldBorderThickness());
 	}
-	private void drawBorder(Graphics2D graphics, GeneralPath boundary, Color color) {
-		Stroke oldStroke = graphics.getStroke();
-		graphics.setColor(color);
-		graphics.setStroke(borderStroke.get(config.worldBorderThickness()));
-		graphics.draw(boundary);
-		graphics.setStroke(oldStroke);
-	}
-	private Color getSailingSeaFogColour() { return FogColour.sailingSea(config.worldFogColour()); }
-	private Color getSailingSeaBorderColour() { return FogColour.sailingSea(config.worldBorderColour()); }
 }

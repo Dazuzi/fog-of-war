@@ -26,13 +26,13 @@ public class RenderCenter {
 			if (wp == null || lp == null) return null;
 			return new RenderCenter(topWv, wp, lp, lp, false);
 		}
-		WorldEntity we = topWv.worldEntities().byIndex(pwv.getId());
+		WorldEntity we = WorldEntityCoords.getWorldEntity(pwv, topWv);
 		if (we == null) return null;
 		LocalPoint boatLp = we.getLocalLocation();
 		if (boatLp == null) return null;
 		LocalPoint boatTarget = we.getTargetLocation();
 		if (boatTarget == null) boatTarget = boatLp;
-		WorldPoint boatWp = WorldPoint.fromLocal(topWv, boatLp.getX(), boatLp.getY(), topWv.getPlane());
+		WorldPoint boatWp = WorldEntityCoords.toTopLevelWorldPoint(topWv, boatLp);
 		return new RenderCenter(topWv, boatWp, boatLp, boatTarget, true);
 	}
 	public LocalPoint snappedCenter() {

@@ -1,4 +1,5 @@
 package com.fogofwar.render.minimap;
+import com.fogofwar.render.RenderAreaType;
 import com.fogofwar.state.RenderCenter;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
@@ -22,15 +23,12 @@ final class MinimapRenderBoundary {
 		seaRenderAreaPath.clear();
 		landRenderAreaPath.clear();
 	}
-	GeneralPath createSeaRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
+	GeneralPath createRenderAreaPath(RenderAreaType type, RenderCenter rc, int radius, Rectangle minimapBounds) {
 		LocalPoint centerLp = rc.snappedCenter();
-		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, seaRenderAreaPath);
+		return buildRenderAreaPath(rc, centerLp, radius, minimapBounds, getPathCache(type));
 	}
-	GeneralPath createLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
-		LocalPoint centerLp = rc.snappedCenter();
-		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, landRenderAreaPath);
-	}
-	private GeneralPath createRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
+	private MinimapPathCache getPathCache(RenderAreaType type) { return type == RenderAreaType.SEA ? seaRenderAreaPath : landRenderAreaPath; }
+	private GeneralPath buildRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
 		if (centerLp == null) {
 			boundaryPoints.clear();
 			return createClippedRenderAreaPath(boundaryPoints, minimapBounds, null, cache);
@@ -45,14 +43,13 @@ final class MinimapRenderBoundary {
 		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path, cache);
 		path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, true, cache.path);
 		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path, cache);
-		return cache.hasLastPath ? cache.lastPath : path;
+		return cache.hasLastPath() ? cache.lastPath : path;
 	}
 	private boolean isValidRenderAreaPath(GeneralPath path, Point centerPoint) { return path == null || centerPoint == null || path.contains(centerPoint.getX(), centerPoint.getY()); }
 	private GeneralPath saveValidPath(GeneralPath path, MinimapPathCache cache) {
 		if (path != null) {
 			cache.lastPath.reset();
 			cache.lastPath.append(path, false);
-			cache.hasLastPath = true;
 		}
 		return path;
 	}

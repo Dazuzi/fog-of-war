@@ -1,13 +1,11 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.render.FogColour;
+import com.fogofwar.render.FogMaskRenderer;
 import com.fogofwar.render.FogPathBuilder;
 import com.fogofwar.render.StrokeCache;
-import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
-import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 final class MinimapFogMask {
@@ -28,29 +26,16 @@ final class MinimapFogMask {
 	}
 	void renderBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		drawBorder(graphics, path, config.minimapBorderColour());
+		FogMaskRenderer.drawBorder(graphics, path, config.minimapBorderColour(), borderStroke, config.minimapBorderThickness());
 	}
 	void renderSailingSeaFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary) {
-		renderSailingExtendedFog(graphics, boundary, innerBoundary, getSailingSeaFogColour());
-	}
-	private void renderSailingExtendedFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary, Color color) {
-		Area area = new Area(boundary);
-		area.subtract(new Area(innerBoundary));
+		Area area = FogMaskRenderer.createDifferenceArea(boundary, innerBoundary);
 		if (area.isEmpty()) return;
-		graphics.setColor(color);
+		graphics.setColor(FogMaskRenderer.sailingSea(config.minimapFogColour()));
 		graphics.fill(area);
 	}
 	void renderSailingSeaBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		drawBorder(graphics, path, getSailingSeaBorderColour());
+		FogMaskRenderer.drawBorder(graphics, path, FogMaskRenderer.sailingSea(config.minimapBorderColour()), borderStroke, config.minimapBorderThickness());
 	}
-	private void drawBorder(Graphics2D graphics, GeneralPath path, Color color) {
-		Stroke oldStroke = graphics.getStroke();
-		graphics.setColor(color);
-		graphics.setStroke(borderStroke.get(config.minimapBorderThickness()));
-		graphics.draw(path);
-		graphics.setStroke(oldStroke);
-	}
-	private Color getSailingSeaFogColour() { return FogColour.sailingSea(config.minimapFogColour()); }
-	private Color getSailingSeaBorderColour() { return FogColour.sailingSea(config.minimapBorderColour()); }
 }

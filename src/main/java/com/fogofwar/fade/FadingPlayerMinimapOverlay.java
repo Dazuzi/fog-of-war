@@ -9,54 +9,36 @@ import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
-import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.widgets.Widget;
-import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
 import javax.inject.Inject;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Shape;
 import java.util.Collection;
-public class FadingPlayerMinimapOverlay extends Overlay {
+public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 	private static final int DOT_SIZE = 4;
-	private final Client client;
-	private final FogOfWarConfig config;
-	private final ClientState clientState;
-	private final FadingPlayerManager manager;
-	private final AreaExclusionManager areaExclusionManager;
 	private final MinimapClipProvider clipProvider;
 	@Inject
 	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, AreaExclusionManager areaExclusionManager, MinimapClipProvider clipProvider) {
-		this.client = client;
-		this.config = config;
-		this.clientState = clientState;
-		this.manager = manager;
-		this.areaExclusionManager = areaExclusionManager;
+		super(client, config, manager, clientState, areaExclusionManager, OverlayLayer.ABOVE_WIDGETS);
 		this.clipProvider = clipProvider;
-		setPosition(OverlayPosition.DYNAMIC);
-		setPriority(Overlay.PRIORITY_HIGH);
-		setLayer(OverlayLayer.ABOVE_WIDGETS);
 	}
 	@Override
-	public Dimension render(Graphics2D graphics) {
-		if (!config.playerFadeMarkerMode().showsMinimap() || clientState.isSuppressed(config, areaExclusionManager)) return null;
-		Collection<FadingPlayer> fadingPlayers = manager.getFadingPlayers().values();
-		if (fadingPlayers.isEmpty()) return null;
-		WorldView wv = client.getTopLevelWorldView();
-		if (wv == null) return null;
+	boolean showsMarker() { return config.playerFadeMarkerMode().showsMinimap(); }
+	@Override
+	Dimension renderPlayers(Graphics2D graphics, WorldView wv, Collection<FadingPlayer> fadingPlayers) {
 		Widget minimapWidget = MinimapWidgetProvider.getMinimapWidget(client);
 		if (minimapWidget == null) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(clipProvider.getClipShape(minimapWidget));
 		try {
-			for (FadingPlayer fadingPlayer : fadingPlayers) renderFadingPlayer(graphics, wv, fadingPlayer);
-			return null;
+			return super.renderPlayers(graphics, wv, fadingPlayers);
 		} finally { graphics.setClip(oldClip); }
 	}
-	private void renderFadingPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
-		WorldPoint wp = fadingPlayer.getLastLocation();
-		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
-		if (lp == null) return;
+	@Override
+	void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer) {
 		Point mp = Perspective.localToMinimap(client, lp);
 		if (mp == null) return;
 		Color color = fadingPlayer.getColor(config);

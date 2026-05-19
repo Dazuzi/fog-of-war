@@ -1,6 +1,7 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.state.AreaExclusionManager;
+import com.fogofwar.state.WorldEntityCoords;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
@@ -8,7 +9,6 @@ import net.runelite.api.GameState;
 import net.runelite.api.Player;
 import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
-import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -51,7 +51,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 	public void onGameTick(GameTick event) {
 		Player localPlayer = client.getLocalPlayer();
 		WorldView worldView = client.getTopLevelWorldView();
-		WorldPoint localPlayerLocation = localPlayer != null && worldView != null ? getTopLevelLocation(localPlayer, localPlayer.getWorldView(), worldView) : null;
+		WorldPoint localPlayerLocation = localPlayer != null && worldView != null ? WorldEntityCoords.playerToTopLevel(localPlayer, localPlayer.getWorldView(), worldView) : null;
 		if (client.getGameState() != GameState.LOGGED_IN || localPlayer == null || worldView == null || localPlayerLocation == null) {
 			clearAllTracking();
 			return;
@@ -124,7 +124,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private void trackPlayers(Player localPlayer, WorldView worldView, int renderDistance) {
 		for (Player player : worldView.players()) {
 			if (player == null || player == localPlayer) continue;
-			WorldPoint playerLocation = getTopLevelLocation(player, worldView, client.getTopLevelWorldView());
+			WorldPoint playerLocation = WorldEntityCoords.playerToTopLevel(player, worldView, client.getTopLevelWorldView());
 			if (playerLocation != null) currentPlayerLocations.put(player, new TrackedPlayer(playerLocation, renderDistance));
 			if (player.getName() != null) currentPlayerNames.add(player.getName());
 		}
@@ -132,19 +132,6 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private boolean isOnWorldEntity(Player player) {
 		WorldView worldView = player.getWorldView();
 		return worldView != null && !worldView.isTopLevel();
-	}
-	private WorldPoint getTopLevelLocation(Player player, WorldView sourceWorldView, WorldView topWorldView) {
-		if (topWorldView == null) return null;
-		if (sourceWorldView == null) sourceWorldView = player.getWorldView();
-		if (sourceWorldView == null) return null;
-		if (sourceWorldView.isTopLevel()) return player.getWorldLocation();
-		WorldEntity worldEntity = topWorldView.worldEntities().byIndex(sourceWorldView.getId());
-		if (worldEntity == null) return null;
-		LocalPoint localPoint = player.getLocalLocation();
-		if (localPoint == null) return null;
-		LocalPoint topLocalPoint = worldEntity.transformToMainWorld(localPoint);
-		if (topLocalPoint == null) return null;
-		return WorldPoint.fromLocal(topWorldView, topLocalPoint.getX(), topLocalPoint.getY(), topWorldView.getPlane());
 	}
 	@Getter
 	private static class TrackedPlayer {

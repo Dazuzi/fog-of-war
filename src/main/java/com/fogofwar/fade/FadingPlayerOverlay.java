@@ -7,45 +7,21 @@ import net.runelite.api.Perspective;
 import net.runelite.api.Point;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
-import net.runelite.api.coords.WorldPoint;
-import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
-import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import javax.inject.Inject;
-import java.awt.*;
-import java.util.Collection;
-public class FadingPlayerOverlay extends Overlay {
-	private final Client client;
-	private final FogOfWarConfig config;
-	private final FadingPlayerManager manager;
-	private final ClientState clientState;
-	private final AreaExclusionManager areaExclusionManager;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Polygon;
+public class FadingPlayerOverlay extends AbstractFadingPlayerOverlay {
 	@Inject
 	protected FadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState, AreaExclusionManager areaExclusionManager) {
-		this.client = client;
-		this.config = config;
-		this.manager = manager;
-		this.clientState = clientState;
-		this.areaExclusionManager = areaExclusionManager;
-		setPosition(OverlayPosition.DYNAMIC);
-		setPriority(Overlay.PRIORITY_HIGH);
-		setLayer(OverlayLayer.ABOVE_SCENE);
+		super(client, config, manager, clientState, areaExclusionManager, OverlayLayer.ABOVE_SCENE);
 	}
 	@Override
-	public Dimension render(Graphics2D graphics) {
-		if (!config.playerFadeMarkerMode().showsWorld() || clientState.isSuppressed(config, areaExclusionManager)) return null;
-		Collection<FadingPlayer> fadingPlayers = manager.getFadingPlayers().values();
-		if (fadingPlayers.isEmpty()) return null;
-		WorldView wv = client.getTopLevelWorldView();
-		if (wv == null) return null;
-		for (FadingPlayer fadingPlayer : fadingPlayers) renderFadingPlayer(graphics, wv, fadingPlayer);
-		return null;
-	}
-	private void renderFadingPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
-		WorldPoint wp = fadingPlayer.getLastLocation();
-		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
-		if (lp == null) return;
+	boolean showsMarker() { return config.playerFadeMarkerMode().showsWorld(); }
+	@Override
+	void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer) {
 		Polygon poly = Perspective.getCanvasTilePoly(client, lp);
 		if (poly == null) return;
 		Color color = fadingPlayer.getColor(config);
