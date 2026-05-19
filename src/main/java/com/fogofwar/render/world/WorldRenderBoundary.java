@@ -10,14 +10,14 @@ import java.util.List;
 final class WorldRenderBoundary {
 	private final Client client;
 	private final List<Point> boundaryPoints = new ArrayList<>(256);
-	private final GeneralPath renderAreaBoundary = new GeneralPath();
-	private final GeneralPath sailingLandRenderAreaBoundary = new GeneralPath();
+	private final GeneralPath seaRenderAreaBoundary = new GeneralPath();
+	private final GeneralPath landRenderAreaBoundary = new GeneralPath();
 	WorldRenderBoundary(Client client) { this.client = client; }
-	GeneralPath createRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
-		return createRenderAreaBoundary(worldView, centerLp, plane, radius, renderAreaBoundary);
+	GeneralPath createSeaRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
+		return createRenderAreaBoundary(worldView, centerLp, plane, radius, seaRenderAreaBoundary);
 	}
-	GeneralPath createSailingLandRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
-		return createRenderAreaBoundary(worldView, centerLp, plane, radius, sailingLandRenderAreaBoundary);
+	GeneralPath createLandRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius) {
+		return createRenderAreaBoundary(worldView, centerLp, plane, radius, landRenderAreaBoundary);
 	}
 	private GeneralPath createRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius, GeneralPath path) {
 		if (centerLp == null) return null;

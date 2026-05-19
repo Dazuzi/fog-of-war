@@ -68,13 +68,13 @@ public interface FogOfWarConfig extends Config {
 	)
 	default EntityExclusionLimit actorCutoutLimit() { return EntityExclusionLimit.LIMIT_64; }
 	@ConfigItem(
-			keyName = "showWorldLandRenderDistanceWhileSailing",
-			name = "Show land render distance",
-			description = "While sailing, also show the normal land render distance.",
+			keyName = "showWorldLandAreaWhileSailing",
+			name = "Show land while Sailing",
+			description = "Show the smaller land actor render area while Sailing.",
 			section = worldSection,
 			position = 5
 	)
-	default boolean showWorldLandRenderDistanceWhileSailing() { return false; }
+	default boolean showWorldLandAreaWhileSailing() { return false; }
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",
@@ -117,13 +117,13 @@ public interface FogOfWarConfig extends Config {
 	)
 	default int minimapBorderThickness() { return 1; }
 	@ConfigItem(
-			keyName = "showMinimapLandRenderDistanceWhileSailing",
-			name = "Show land render distance",
-			description = "While sailing, also show the normal land render distance.",
+			keyName = "showMinimapLandAreaWhileSailing",
+			name = "Show land while Sailing",
+			description = "Show the smaller land actor render area while Sailing.",
 			section = minimapSection,
 			position = 4
 	)
-	default boolean showMinimapLandRenderDistanceWhileSailing() { return false; }
+	default boolean showMinimapLandAreaWhileSailing() { return false; }
 	@ConfigSection(
 			name = "Fading Players",
 			description = "Settings for marking players that leave render distance",
@@ -190,8 +190,8 @@ public interface FogOfWarConfig extends Config {
 	@Range(min = 1, max = 64)
 	@ConfigItem(
 			keyName = "landRenderDistance",
-			name = "Land render distance",
-			description = "Land render distance used by the overlay. Does not change the game's render distance.",
+			name = "Land actor distance",
+			description = "Land actor render distance used by the overlay. Does not change the game's render distance.",
 			section = tweaksSection,
 			position = 0
 	)
@@ -199,8 +199,8 @@ public interface FogOfWarConfig extends Config {
 	@Range(min = 1, max = 64)
 	@ConfigItem(
 			keyName = "sailingRenderDistance",
-			name = "Sailing render distance",
-			description = "Sailing render distance used by the overlay. Does not change the game's render distance.",
+			name = "Sea actor distance",
+			description = "Sea actor render distance used by the overlay. Does not change the game's render distance.",
 			section = tweaksSection,
 			position = 1
 	)

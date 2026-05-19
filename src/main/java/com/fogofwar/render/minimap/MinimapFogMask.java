@@ -22,20 +22,27 @@ final class MinimapFogMask {
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogFillPath);
 	}
+	void renderFullFog(Graphics2D graphics, Shape minimapClipShape) {
+		graphics.setColor(config.minimapFogColour());
+		graphics.fill(minimapClipShape);
+	}
 	void renderBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
 		drawBorder(graphics, path, config.minimapBorderColour());
 	}
-	void renderSailingExtendedFog(Graphics2D graphics, GeneralPath boundary, GeneralPath landBoundary) {
+	void renderSailingSeaFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary) {
+		renderSailingExtendedFog(graphics, boundary, innerBoundary, getSailingSeaFogColour());
+	}
+	private void renderSailingExtendedFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary, Color color) {
 		Area area = new Area(boundary);
-		area.subtract(new Area(landBoundary));
+		area.subtract(new Area(innerBoundary));
 		if (area.isEmpty()) return;
-		graphics.setColor(getSailingMinimapFogColour());
+		graphics.setColor(color);
 		graphics.fill(area);
 	}
-	void renderSailingLandBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
+	void renderSailingSeaBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		drawBorder(graphics, path, getSailingMinimapBorderColour());
+		drawBorder(graphics, path, getSailingSeaBorderColour());
 	}
 	private void drawBorder(Graphics2D graphics, GeneralPath path, Color color) {
 		Stroke oldStroke = graphics.getStroke();
@@ -44,6 +51,6 @@ final class MinimapFogMask {
 		graphics.draw(path);
 		graphics.setStroke(oldStroke);
 	}
-	private Color getSailingMinimapFogColour() { return FogColour.sailingLand(config.minimapFogColour()); }
-	private Color getSailingMinimapBorderColour() { return FogColour.sailingLand(config.minimapBorderColour()); }
+	private Color getSailingSeaFogColour() { return FogColour.sailingSea(config.minimapFogColour()); }
+	private Color getSailingSeaBorderColour() { return FogColour.sailingSea(config.minimapBorderColour()); }
 }

@@ -15,20 +15,20 @@ final class MinimapRenderBoundary {
 	private static final int MINIMAP_RENDER_AREA_PADDING = 1;
 	private final Client client;
 	private final List<Point> boundaryPoints = new ArrayList<>(128);
-	private final MinimapPathCache renderAreaPath = new MinimapPathCache();
-	private final MinimapPathCache sailingLandRenderAreaPath = new MinimapPathCache();
+	private final MinimapPathCache seaRenderAreaPath = new MinimapPathCache();
+	private final MinimapPathCache landRenderAreaPath = new MinimapPathCache();
 	MinimapRenderBoundary(Client client) { this.client = client; }
 	void clearCaches() {
-		renderAreaPath.clear();
-		sailingLandRenderAreaPath.clear();
+		seaRenderAreaPath.clear();
+		landRenderAreaPath.clear();
 	}
-	GeneralPath createRenderAreaPath(RenderCenter rc, int radius, int landRadius, Rectangle minimapBounds) {
+	GeneralPath createSeaRenderAreaPath(RenderCenter rc, int radius, int landRadius, Rectangle minimapBounds) {
 		LocalPoint centerLp = rc.snappedCenter(radius, landRadius);
-		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, renderAreaPath);
+		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, seaRenderAreaPath);
 	}
-	GeneralPath createSailingLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
+	GeneralPath createLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
 		LocalPoint centerLp = rc.snappedCenter(radius, radius);
-		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, sailingLandRenderAreaPath);
+		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, landRenderAreaPath);
 	}
 	private GeneralPath createRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
 		if (centerLp == null) {

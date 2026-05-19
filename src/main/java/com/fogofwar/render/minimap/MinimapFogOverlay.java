@@ -58,19 +58,35 @@ public class MinimapFogOverlay extends Overlay {
 		graphics.setClip(minimapClipShape);
 		try {
 			int landRadius = renderDistanceManager.getCurrentRenderDistance();
-			int radius = rc.isOnWorldEntity() ? config.sailingRenderDistance() : landRadius;
-			GeneralPath fogPath = renderBoundary.createRenderAreaPath(rc, radius, landRadius, minimap.getBounds());
-			if (fogPath == null) return null;
-			boolean showSailingLandRenderDistance = rc.isOnWorldEntity() && config.showMinimapLandRenderDistanceWhileSailing() && landRadius < radius;
-			GeneralPath sailingLandPath = null;
-			if (showSailingLandRenderDistance) sailingLandPath = renderBoundary.createSailingLandRenderAreaPath(rc, landRadius, minimap.getBounds());
-			if (showFog) fogMask.renderFog(graphics, minimapClipShape, fogPath);
-			if (showFog && sailingLandPath != null) fogMask.renderSailingExtendedFog(graphics, fogPath, sailingLandPath);
-			if (showBorder) {
-				fogMask.renderBorder(graphics, minimapClipShape, fogPath);
-				if (sailingLandPath != null) fogMask.renderSailingLandBorder(graphics, minimapClipShape, sailingLandPath);
-			}
+			if (rc.isOnWorldEntity()) renderSailingFrame(graphics, showFog, showBorder, rc, minimap, minimapClipShape, landRadius);
+			else renderLandFrame(graphics, showFog, showBorder, rc, minimap, minimapClipShape, landRadius);
 			return null;
 		} finally { graphics.setClip(oldClip); }
+	}
+	private void renderLandFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, Widget minimap, Shape minimapClipShape, int landRadius) {
+		GeneralPath landPath = renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap.getBounds());
+		if (landPath == null) {
+			if (showFog) fogMask.renderFullFog(graphics, minimapClipShape);
+			return;
+		}
+		if (showFog) fogMask.renderFog(graphics, minimapClipShape, landPath);
+		if (showBorder) fogMask.renderBorder(graphics, minimapClipShape, landPath);
+	}
+	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, Widget minimap, Shape minimapClipShape, int landRadius) {
+		int seaRadius = config.sailingRenderDistance();
+		GeneralPath seaPath = renderBoundary.createSeaRenderAreaPath(rc, seaRadius, landRadius, minimap.getBounds());
+		if (seaPath == null) {
+			if (showFog) fogMask.renderFullFog(graphics, minimapClipShape);
+			return;
+		}
+		GeneralPath landPath = config.showMinimapLandAreaWhileSailing() ? renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap.getBounds()) : null;
+		if (showFog) {
+			fogMask.renderFog(graphics, minimapClipShape, seaPath);
+			if (landPath != null) fogMask.renderSailingSeaFog(graphics, seaPath, landPath);
+		}
+		if (showBorder) {
+			fogMask.renderBorder(graphics, minimapClipShape, seaPath);
+			if (landPath != null) fogMask.renderSailingSeaBorder(graphics, minimapClipShape, landPath);
+		}
 	}
 }

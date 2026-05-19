@@ -37,18 +37,21 @@ final class WorldFogMask {
 	void renderBorder(Graphics2D graphics, GeneralPath boundary) {
 		drawBorder(graphics, boundary, config.worldBorderColour());
 	}
-	void renderSailingExtendedFog(Graphics2D graphics, Rectangle viewport, WorldView worldView, GeneralPath boundary, GeneralPath landBoundary, LocalPoint centerLp, int plane, int radius, ActorCutoutMask actorCutouts) {
+	void renderSailingSeaFog(Graphics2D graphics, Rectangle viewport, WorldView worldView, GeneralPath boundary, GeneralPath innerBoundary, LocalPoint centerLp, int plane, int radius, ActorCutoutMask actorCutouts) {
+		renderSailingExtendedFog(graphics, viewport, worldView, boundary, innerBoundary, centerLp, plane, radius, actorCutouts, getSailingSeaFogColour());
+	}
+	private void renderSailingExtendedFog(Graphics2D graphics, Rectangle viewport, WorldView worldView, GeneralPath boundary, GeneralPath innerBoundary, LocalPoint centerLp, int plane, int radius, ActorCutoutMask actorCutouts, Color color) {
 		Area area = new Area(boundary);
-		area.subtract(new Area(landBoundary));
+		area.subtract(new Area(innerBoundary));
 		if (area.isEmpty()) return;
 		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
-		if (exclusionLimit.isEnabled()) actorCutouts.subtractExclusions(area, viewport, worldView, landBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
+		if (exclusionLimit.isEnabled()) actorCutouts.subtractExclusions(area, viewport, worldView, innerBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
 		if (area.isEmpty()) return;
-		graphics.setColor(getSailingExtendedFogColour());
+		graphics.setColor(color);
 		graphics.fill(area);
 	}
-	void renderSailingLandBorder(Graphics2D graphics, GeneralPath boundary) {
-		drawBorder(graphics, boundary, getSailingLandBorderColour());
+	void renderSailingSeaBorder(Graphics2D graphics, GeneralPath boundary) {
+		drawBorder(graphics, boundary, getSailingSeaBorderColour());
 	}
 	private void drawBorder(Graphics2D graphics, GeneralPath boundary, Color color) {
 		Stroke oldStroke = graphics.getStroke();
@@ -57,6 +60,6 @@ final class WorldFogMask {
 		graphics.draw(boundary);
 		graphics.setStroke(oldStroke);
 	}
-	private Color getSailingExtendedFogColour() { return FogColour.sailingLand(config.worldFogColour()); }
-	private Color getSailingLandBorderColour() { return FogColour.sailingLand(config.worldBorderColour()); }
+	private Color getSailingSeaFogColour() { return FogColour.sailingSea(config.worldFogColour()); }
+	private Color getSailingSeaBorderColour() { return FogColour.sailingSea(config.worldBorderColour()); }
 }
