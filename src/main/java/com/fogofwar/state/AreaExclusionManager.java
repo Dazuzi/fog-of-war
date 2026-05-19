@@ -15,15 +15,15 @@ import java.util.List;
 @Singleton
 public class AreaExclusionManager extends LifecycleComponent {
 	private static final List<ExcludedArea> EXCLUDED_AREAS = List.of(
-			new ExcludedArea(2367, 5053, 2432, 5119, 0),			// TzHaar Fight Cave
-			new ExcludedArea(2256, 5328, 2286, 5359, 0),			// Inferno
-			new ExcludedArea(3500, 5100, 4000, 5440, 0, 1),		// Tombs of Amascut
-			new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2),	// Theatre of Blood
-			new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 1
-			new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 2
-			new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2),	// Hallowed Sepulchre Floors 3-5
-			new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2),	// Chambers of Xeric
-			new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2)	// Chambers of Xeric
+			new ExcludedArea(2367, 5053, 2432, 5119, 0),
+			new ExcludedArea(2256, 5328, 2286, 5359, 0),
+			new ExcludedArea(3500, 5100, 4000, 5440, 0, 1),
+			new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2),
+			new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2),
+			new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2),
+			new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2),
+			new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2),
+			new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2)
 	);
 	private final Client client;
 	@Getter
@@ -49,26 +49,13 @@ public class AreaExclusionManager extends LifecycleComponent {
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) { checkArea(); }
 	private void checkArea() {
-		if (client.getLocalPlayer() == null) {
-			playerInExcludedArea = false;
-			return;
-		}
+		WorldPoint playerPoint = currentPlayerWorldPoint();
+		playerInExcludedArea = playerPoint != null && EXCLUDED_AREAS.stream().anyMatch(area -> area.contains(playerPoint));
+	}
+	private WorldPoint currentPlayerWorldPoint() {
+		if (client.getLocalPlayer() == null) return null;
 		LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
-		if (localPoint == null) {
-			playerInExcludedArea = false;
-			return;
-		}
-		WorldPoint playerPoint = WorldPoint.fromLocalInstance(client, localPoint);
-		if (playerPoint == null) {
-			playerInExcludedArea = false;
-			return;
-		}
-		for (ExcludedArea area : EXCLUDED_AREAS) {
-			if (area.contains(playerPoint)) {
-				playerInExcludedArea = true;
-				return;
-			}
-		}
-		playerInExcludedArea = false;
+		if (localPoint == null) return null;
+		return WorldPoint.fromLocalInstance(client, localPoint);
 	}
 }

@@ -1,4 +1,4 @@
-package com.fogofwar.actor;
+package com.fogofwar.render.world;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Actor;

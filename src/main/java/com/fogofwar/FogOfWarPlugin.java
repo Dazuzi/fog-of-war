@@ -7,10 +7,11 @@ import com.fogofwar.debug.DebugOverlay;
 import com.fogofwar.fade.FadingPlayerManager;
 import com.fogofwar.fade.FadingPlayerMinimapOverlay;
 import com.fogofwar.fade.FadingPlayerOverlay;
+import com.fogofwar.lifecycle.LifecycleComponent;
 import com.fogofwar.lifecycle.OverlayToggle;
 import com.fogofwar.render.minimap.MinimapFogOverlay;
 import com.fogofwar.render.world.WorldFogOverlay;
-import com.fogofwar.actor.VisibleActorTracker;
+import com.fogofwar.render.world.VisibleActorTracker;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.google.inject.Provides;
@@ -25,6 +26,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 import java.util.List;
+import java.util.function.Predicate;
 @PluginDescriptor(
 		name = "Fog of War",
 		description = "Applies a fog of war effect outside of the player render distance, in both the world and on the minimap.",
@@ -54,33 +56,31 @@ public class FogOfWarPlugin extends Plugin {
 	private VisibleActorTracker visibleActorTracker;
 	@Inject
 	private DebugOverlay debugOverlay;
-	private OverlayToggle worldOverlayToggle;
-	private OverlayToggle minimapOverlayToggle;
-	private OverlayToggle debugOverlayToggle;
-	private OverlayToggle fadingPlayerOverlayToggle;
-	private OverlayToggle fadingPlayerMinimapOverlayToggle;
-	private List<OverlayToggle> overlayToggles = List.of();
+	private List<ToggleSpec> overlayToggles = List.of();
+	private List<LifecycleSpec> lifecycleComponents = List.of();
 	@Override
 	protected void startUp() {
-		initOverlayToggles();
+		initComponents();
 		updateComponents();
 	}
 	@Override
 	protected void shutDown() {
-		for (OverlayToggle overlayToggle : overlayToggles) overlayToggle.set(false);
+		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.disable();
 		worldOverlay.clearCaches();
 		minimapOverlay.clearCaches();
-		fadingPlayerManager.stop();
-		areaExclusionManager.stop();
-		visibleActorTracker.stop();
+		for (LifecycleSpec component : lifecycleComponents) component.stop();
 	}
-	private void initOverlayToggles() {
-		worldOverlayToggle = new OverlayToggle(overlayManager, worldOverlay);
-		minimapOverlayToggle = new OverlayToggle(overlayManager, minimapOverlay);
-		debugOverlayToggle = new OverlayToggle(overlayManager, debugOverlay);
-		fadingPlayerOverlayToggle = new OverlayToggle(overlayManager, fadingPlayerOverlay);
-		fadingPlayerMinimapOverlayToggle = new OverlayToggle(overlayManager, fadingPlayerMinimapOverlay);
-		overlayToggles = List.of(worldOverlayToggle, minimapOverlayToggle, debugOverlayToggle, fadingPlayerOverlayToggle, fadingPlayerMinimapOverlayToggle);
+	private void initComponents() {
+		overlayToggles = List.of(
+				new ToggleSpec(new OverlayToggle(overlayManager, worldOverlay), state -> state.worldActive),
+				new ToggleSpec(new OverlayToggle(overlayManager, minimapOverlay), state -> state.minimapActive),
+				new ToggleSpec(new OverlayToggle(overlayManager, debugOverlay), state -> state.debugActive),
+				new ToggleSpec(new OverlayToggle(overlayManager, fadingPlayerOverlay), state -> state.fadingWorldActive),
+				new ToggleSpec(new OverlayToggle(overlayManager, fadingPlayerMinimapOverlay), state -> state.fadingMinimapActive));
+		lifecycleComponents = List.of(
+				new LifecycleSpec(areaExclusionManager, state -> state.overlayActive),
+				new LifecycleSpec(fadingPlayerManager, state -> state.fadingActive),
+				new LifecycleSpec(visibleActorTracker, state -> state.visibleActorTrackingActive));
 	}
 	@Subscribe
 	@SuppressWarnings("unused")
@@ -98,6 +98,11 @@ public class FogOfWarPlugin extends Plugin {
 		updateComponents();
 	}
 	private void updateComponents() {
+		ComponentState state = createComponentState();
+		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.update(state);
+		for (LifecycleSpec component : lifecycleComponents) component.update(state);
+	}
+	private ComponentState createComponentState() {
 		boolean areaEnabled = isCurrentAreaEnabled();
 		FogDisplayMode worldMode = config.worldDisplayMode();
 		FogDisplayMode minimapMode = config.minimapDisplayMode();
@@ -108,19 +113,53 @@ public class FogOfWarPlugin extends Plugin {
 		boolean fadingMinimapActive = areaEnabled && fadingPlayerMode.showsMinimap();
 		boolean fadingActive = fadingWorldActive || fadingMinimapActive;
 		boolean overlayActive = worldActive || minimapActive || fadingActive;
-		worldOverlayToggle.set(worldActive);
-		minimapOverlayToggle.set(minimapActive);
-		debugOverlayToggle.set(config.debugOverlayEnabled());
-		fadingPlayerOverlayToggle.set(fadingWorldActive);
-		fadingPlayerMinimapOverlayToggle.set(fadingMinimapActive);
-		if (overlayActive) areaExclusionManager.start();
-		else areaExclusionManager.stop();
-		if (fadingActive) fadingPlayerManager.start();
-		else fadingPlayerManager.stop();
-		if (worldActive && worldMode.showsFog() && config.actorCutoutLimit().isEnabled()) visibleActorTracker.start();
-		else visibleActorTracker.stop();
+		boolean visibleActorTrackingActive = worldActive && worldMode.showsFog() && config.actorCutoutLimit().isEnabled();
+		return new ComponentState(worldActive, minimapActive, config.debugOverlayEnabled(), fadingWorldActive, fadingMinimapActive, fadingActive, overlayActive, visibleActorTrackingActive);
 	}
 	private boolean isCurrentAreaEnabled() { return !config.onlyInWilderness() || !clientState.isNotInWilderness(); }
+	private static final class ToggleSpec {
+		private final OverlayToggle toggle;
+		private final Predicate<ComponentState> activeFn;
+		private ToggleSpec(OverlayToggle toggle, Predicate<ComponentState> activeFn) {
+			this.toggle = toggle;
+			this.activeFn = activeFn;
+		}
+		private void update(ComponentState state) { toggle.set(activeFn.test(state)); }
+		private void disable() { toggle.set(false); }
+	}
+	private static final class LifecycleSpec {
+		private final LifecycleComponent component;
+		private final Predicate<ComponentState> activeFn;
+		private LifecycleSpec(LifecycleComponent component, Predicate<ComponentState> activeFn) {
+			this.component = component;
+			this.activeFn = activeFn;
+		}
+		private void update(ComponentState state) {
+			if (activeFn.test(state)) component.start();
+			else component.stop();
+		}
+		private void stop() { component.stop(); }
+	}
+	private static final class ComponentState {
+		private final boolean worldActive;
+		private final boolean minimapActive;
+		private final boolean debugActive;
+		private final boolean fadingWorldActive;
+		private final boolean fadingMinimapActive;
+		private final boolean fadingActive;
+		private final boolean overlayActive;
+		private final boolean visibleActorTrackingActive;
+		private ComponentState(boolean worldActive, boolean minimapActive, boolean debugActive, boolean fadingWorldActive, boolean fadingMinimapActive, boolean fadingActive, boolean overlayActive, boolean visibleActorTrackingActive) {
+			this.worldActive = worldActive;
+			this.minimapActive = minimapActive;
+			this.debugActive = debugActive;
+			this.fadingWorldActive = fadingWorldActive;
+			this.fadingMinimapActive = fadingMinimapActive;
+			this.fadingActive = fadingActive;
+			this.overlayActive = overlayActive;
+			this.visibleActorTrackingActive = visibleActorTrackingActive;
+		}
+	}
 	@Provides
 	@SuppressWarnings("unused")
 	FogOfWarConfig provideConfig(ConfigManager configManager) {
