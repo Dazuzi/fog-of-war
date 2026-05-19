@@ -1,12 +1,10 @@
 package com.fogofwar.render.world;
-import com.fogofwar.actor.VisibleActorTracker;
 import com.fogofwar.state.WorldEntityCoords;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
-import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
@@ -98,7 +96,7 @@ final class ActorCutoutMask {
 	private void collectExclusionCandidate(Actor actor, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int localRadius, boolean ranked, int bucketColumns) {
 		if (actor == null) return;
 		boolean priority = actor == client.getLocalPlayer();
-		ActorLocation location = getActorLocation(actor, worldView);
+		WorldEntityCoords.ResolvedPoint location = WorldEntityCoords.resolveTopLevel(actor, worldView);
 		if (location == null || location.worldPoint.getPlane() != plane) return;
 		ActorHullCache.Entry cached = hullCache.get(actor);
 		hullCache.markSeen(actor);
@@ -131,25 +129,6 @@ final class ActorCutoutMask {
 			score = getCandidateScore(actor, false, edgeDistance);
 		}
 		addExclusionCandidate(actor, cached, location.worldPoint, anim, frame, pose, poseFrame, false, score, bucket, canvasX, canvasY, localX, localY);
-	}
-	private ActorLocation getActorLocation(Actor actor, WorldView topWorldView) {
-		WorldView actorWorldView = actor.getWorldView();
-		if (actorWorldView == null) return null;
-		WorldPoint worldPoint = actor.getWorldLocation();
-		LocalPoint localPoint = actor.getLocalLocation();
-		if (actorWorldView == topWorldView) {
-			if (worldPoint == null) return null;
-			if (localPoint == null) localPoint = LocalPoint.fromWorld(topWorldView, worldPoint);
-			return localPoint != null ? new ActorLocation(worldPoint, localPoint) : null;
-		}
-		if (actorWorldView.isTopLevel()) return null;
-		WorldEntity worldEntity = WorldEntityCoords.getWorldEntity(actorWorldView, topWorldView);
-		if (worldEntity == null) return null;
-		if (localPoint == null && worldPoint != null) localPoint = LocalPoint.fromWorld(actorWorldView, worldPoint);
-		if (localPoint == null) return null;
-		LocalPoint topLocalPoint = worldEntity.transformToMainWorld(localPoint);
-		WorldPoint topWorldPoint = WorldEntityCoords.toTopLevelWorldPoint(topWorldView, topLocalPoint);
-		return topWorldPoint != null ? new ActorLocation(topWorldPoint, topLocalPoint) : null;
 	}
 	private void addCachedExclusionCandidate(Actor actor, ActorHullCache.Entry cached, WorldPoint awp, int anim, int frame, int pose, int poseFrame, boolean ranked, int bucketColumns, LocalPoint centerLp, int localRadius) {
 		int bucket = -1, score = 0;
@@ -255,13 +234,5 @@ final class ActorCutoutMask {
 		if (candidate.actor != client.getLocalPlayer() && boundary.contains(bounds)) return null;
 		cached.area = new Area(hull);
 		return cached.area;
-	}
-	private static final class ActorLocation {
-		private final WorldPoint worldPoint;
-		private final LocalPoint localPoint;
-		private ActorLocation(WorldPoint worldPoint, LocalPoint localPoint) {
-			this.worldPoint = worldPoint;
-			this.localPoint = localPoint;
-		}
 	}
 }

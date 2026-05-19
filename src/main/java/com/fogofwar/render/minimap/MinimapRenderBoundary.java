@@ -1,5 +1,5 @@
 package com.fogofwar.render.minimap;
-import com.fogofwar.render.RenderAreaType;
+import com.fogofwar.render.BoundaryPathBuilder;
 import com.fogofwar.state.RenderCenter;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
@@ -23,11 +23,12 @@ final class MinimapRenderBoundary {
 		seaRenderAreaPath.clear();
 		landRenderAreaPath.clear();
 	}
-	GeneralPath createRenderAreaPath(RenderAreaType type, RenderCenter rc, int radius, Rectangle minimapBounds) {
-		LocalPoint centerLp = rc.snappedCenter();
-		return buildRenderAreaPath(rc, centerLp, radius, minimapBounds, getPathCache(type));
+	GeneralPath createSeaRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
+		return buildRenderAreaPath(rc, rc.snappedCenter(), radius, minimapBounds, seaRenderAreaPath);
 	}
-	private MinimapPathCache getPathCache(RenderAreaType type) { return type == RenderAreaType.SEA ? seaRenderAreaPath : landRenderAreaPath; }
+	GeneralPath createLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
+		return buildRenderAreaPath(rc, rc.snappedCenter(), radius, minimapBounds, landRenderAreaPath);
+	}
 	private GeneralPath buildRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
 		WorldPoint centerWp = WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane());
 		List<Point> points = getBoundaryPointsWithNulls(rc.getWorldView(), centerWp, centerLp, radius);
@@ -35,11 +36,9 @@ final class MinimapRenderBoundary {
 		return createClippedRenderAreaPath(points, minimapBounds, centerPoint, cache);
 	}
 	private GeneralPath createClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, MinimapPathCache cache) {
-		GeneralPath path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, false, cache.path);
-		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path, cache);
-		path = buildClippedRenderAreaPath(points, minimapBounds, centerPoint, true, cache.path);
-		if (isValidRenderAreaPath(path, centerPoint)) return saveValidPath(path, cache);
-		return cache.hasLastPath() ? cache.lastPath : path;
+		double arcRadius = Math.max(minimapBounds.width, minimapBounds.height) / 2.0 + 1;
+		GeneralPath path = BoundaryPathBuilder.build(cache.path, points, minimapBounds.getCenterX(), minimapBounds.getCenterY(), arcRadius, point -> padRenderAreaPoint(point, minimapBounds, centerPoint), p -> createFullMinimapCoveragePath(minimapBounds, p), p -> isValidRenderAreaPath(p, centerPoint), p -> cache.hasLastPath() ? cache.lastPath : p);
+		return path != cache.lastPath && isValidRenderAreaPath(path, centerPoint) ? saveValidPath(path, cache) : path;
 	}
 	private boolean isValidRenderAreaPath(GeneralPath path, Point centerPoint) { return path == null || centerPoint == null || path.contains(centerPoint.getX(), centerPoint.getY()); }
 	private GeneralPath saveValidPath(GeneralPath path, MinimapPathCache cache) {
@@ -47,54 +46,6 @@ final class MinimapRenderBoundary {
 			cache.lastPath.reset();
 			cache.lastPath.append(path, false);
 		}
-		return path;
-	}
-	private GeneralPath buildClippedRenderAreaPath(List<Point> points, Rectangle minimapBounds, Point centerPoint, boolean reverseArc, GeneralPath path) {
-		int n = points.size();
-		int firstVisible = -1;
-		int visibleCount = 0;
-		for (int i = 0; i < n; i++) {
-			if (points.get(i) != null) {
-				if (firstVisible == -1) firstVisible = i;
-				visibleCount++;
-			}
-		}
-		if (visibleCount == 0) return createFullMinimapCoveragePath(minimapBounds, path);
-		path.reset();
-		if (visibleCount == n) {
-			Point first = padRenderAreaPoint(points.get(0), minimapBounds, centerPoint);
-			path.moveTo(first.getX(), first.getY());
-			for (int i = 1; i < n; i++) {
-				Point p = padRenderAreaPoint(points.get(i), minimapBounds, centerPoint);
-				path.lineTo(p.getX(), p.getY());
-			}
-			path.closePath();
-			return path;
-		}
-		Point first = padRenderAreaPoint(points.get(firstVisible), minimapBounds, centerPoint);
-		path.moveTo(first.getX(), first.getY());
-		for (int i = 0; i < n; i++) {
-			int currentIndex = (firstVisible + i) % n;
-			int nextIndex = (firstVisible + i + 1) % n;
-			Point p1 = points.get(currentIndex);
-			Point p2 = points.get(nextIndex);
-			if (p1 != null) {
-				if (p2 != null) {
-					Point p = padRenderAreaPoint(p2, minimapBounds, centerPoint);
-					path.lineTo(p.getX(), p.getY());
-				} else {
-					int nextVisibleIndex = -1;
-					for (int j = 2; j < n; j++) {
-						if (points.get((currentIndex + j) % n) != null) {
-							nextVisibleIndex = (currentIndex + j) % n;
-							break;
-						}
-					}
-					if (nextVisibleIndex != -1) addArcToPath(path, padRenderAreaPoint(p1, minimapBounds, centerPoint), padRenderAreaPoint(points.get(nextVisibleIndex), minimapBounds, centerPoint), minimapBounds, reverseArc);
-				}
-			}
-		}
-		path.closePath();
 		return path;
 	}
 	private Point padRenderAreaPoint(Point point, Rectangle minimapBounds, Point centerPoint) {
@@ -105,21 +56,6 @@ final class MinimapRenderBoundary {
 		double distance = Math.hypot(dx, dy);
 		if (distance == 0) return point;
 		return new Point((int) Math.round(point.getX() + dx * MINIMAP_RENDER_AREA_PADDING / distance), (int) Math.round(point.getY() + dy * MINIMAP_RENDER_AREA_PADDING / distance));
-	}
-	private void addArcToPath(GeneralPath path, Point p1, Point p2, Rectangle minimapBounds, boolean reverse) {
-		double centerX = minimapBounds.getCenterX();
-		double centerY = minimapBounds.getCenterY();
-		double radius = Math.max(minimapBounds.width, minimapBounds.height) / 2.0 + 1;
-		double startAngle = Math.toDegrees(Math.atan2(p1.getY() - centerY, p1.getX() - centerX));
-		double endAngle = Math.toDegrees(Math.atan2(p2.getY() - centerY, p2.getX() - centerX));
-		double sweep = endAngle - startAngle;
-		if (sweep <= -180) { sweep += 360; } else if (sweep > 180) { sweep -= 360; }
-		if (reverse) sweep += sweep > 0 ? -360 : 360;
-		int numSteps = (int) (Math.abs(sweep) / 10) + 1;
-		for (int i = 1; i <= numSteps; i++) {
-			double currentAngleRad = Math.toRadians(startAngle + (sweep * i / numSteps));
-			path.lineTo((float) (centerX + radius * Math.cos(currentAngleRad)), (float) (centerY + radius * Math.sin(currentAngleRad)));
-		}
 	}
 	private List<Point> getBoundaryPointsWithNulls(WorldView worldView, WorldPoint center, LocalPoint centerLp, int radius) {
 		boundaryPoints.clear();

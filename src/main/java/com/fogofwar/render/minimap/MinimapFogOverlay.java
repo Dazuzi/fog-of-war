@@ -1,7 +1,6 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogDisplayMode;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.render.RenderAreaType;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.fogofwar.state.RenderCenter;
@@ -62,7 +61,7 @@ public class MinimapFogOverlay extends Overlay {
 		} finally { graphics.setClip(oldClip); }
 	}
 	private void renderLandFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, Widget minimap, Shape minimapClipShape, int landRadius) {
-		GeneralPath landPath = renderBoundary.createRenderAreaPath(RenderAreaType.LAND, rc, landRadius, minimap.getBounds());
+		GeneralPath landPath = renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap.getBounds());
 		if (landPath == null) {
 			if (showFog) fogMask.renderFullFog(graphics, minimapClipShape);
 			return;
@@ -72,12 +71,12 @@ public class MinimapFogOverlay extends Overlay {
 	}
 	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, Widget minimap, Shape minimapClipShape, int landRadius) {
 		int seaRadius = config.sailingRenderDistance();
-		GeneralPath seaPath = renderBoundary.createRenderAreaPath(RenderAreaType.SEA, rc, seaRadius, minimap.getBounds());
+		GeneralPath seaPath = renderBoundary.createSeaRenderAreaPath(rc, seaRadius, minimap.getBounds());
 		if (seaPath == null) {
 			if (showFog) fogMask.renderFullFog(graphics, minimapClipShape);
 			return;
 		}
-		GeneralPath landPath = config.showMinimapLandAreaWhileSailing() ? renderBoundary.createRenderAreaPath(RenderAreaType.LAND, rc, landRadius, minimap.getBounds()) : null;
+		GeneralPath landPath = config.showMinimapLandAreaWhileSailing() ? renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap.getBounds()) : null;
 		if (showFog) {
 			fogMask.renderFog(graphics, minimapClipShape, seaPath);
 			if (landPath != null) fogMask.renderSailingSeaFog(graphics, seaPath, landPath);

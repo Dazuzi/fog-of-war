@@ -69,7 +69,7 @@ public interface FogOfWarConfig extends Config {
 	default EntityExclusionLimit actorCutoutLimit() { return EntityExclusionLimit.LIMIT_64; }
 	@ConfigItem(
 			keyName = "showWorldLandAreaWhileSailing",
-			name = "Show land while Sailing",
+			name = "Show land area while Sailing",
 			description = "Show the smaller land actor render area while Sailing.",
 			section = worldSection,
 			position = 5
@@ -118,7 +118,7 @@ public interface FogOfWarConfig extends Config {
 	default int minimapBorderThickness() { return 1; }
 	@ConfigItem(
 			keyName = "showMinimapLandAreaWhileSailing",
-			name = "Show land while Sailing",
+			name = "Show land area while Sailing",
 			description = "Show the smaller land actor render area while Sailing.",
 			section = minimapSection,
 			position = 4

@@ -23,6 +23,7 @@ public class DebugOverlay extends OverlayPanel {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		if (!config.debugOverlayEnabled() || clientState.isClientNotReady()) return null;
+		panelComponent.getChildren().clear();
 		WorldView wv = getWorldView();
 		addLine(wv != null ? wv.getPlane() : "?");
 		return super.render(graphics);

@@ -1,4 +1,5 @@
 package com.fogofwar.state;
+import net.runelite.api.Actor;
 import net.runelite.api.Player;
 import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
@@ -14,16 +15,36 @@ public final class WorldEntityCoords {
 		if (topWorldView == null || localPoint == null) return null;
 		return WorldPoint.fromLocal(topWorldView, localPoint.getX(), localPoint.getY(), topWorldView.getPlane());
 	}
+	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView topWorldView) { return resolveTopLevel(actor, null, topWorldView); }
 	public static WorldPoint playerToTopLevel(Player player, WorldView sourceWorldView, WorldView topWorldView) {
-		if (player == null || topWorldView == null) return null;
-		if (sourceWorldView == null) sourceWorldView = player.getWorldView();
+		ResolvedPoint point = resolveTopLevel(player, sourceWorldView, topWorldView);
+		return point != null ? point.worldPoint : null;
+	}
+	private static ResolvedPoint resolveTopLevel(Actor actor, WorldView sourceWorldView, WorldView topWorldView) {
+		if (actor == null || topWorldView == null) return null;
+		if (sourceWorldView == null) sourceWorldView = actor.getWorldView();
 		if (sourceWorldView == null) return null;
-		if (sourceWorldView.isTopLevel()) return player.getWorldLocation();
+		WorldPoint worldPoint = actor.getWorldLocation();
+		LocalPoint localPoint = actor.getLocalLocation();
+		if (sourceWorldView.isTopLevel()) {
+			if (worldPoint == null) return null;
+			if (localPoint == null) localPoint = LocalPoint.fromWorld(topWorldView, worldPoint);
+			return localPoint != null ? new ResolvedPoint(worldPoint, localPoint) : null;
+		}
 		WorldEntity worldEntity = getWorldEntity(sourceWorldView, topWorldView);
 		if (worldEntity == null) return null;
-		LocalPoint localPoint = player.getLocalLocation();
+		if (localPoint == null && worldPoint != null) localPoint = LocalPoint.fromWorld(sourceWorldView, worldPoint);
 		if (localPoint == null) return null;
 		LocalPoint topLocalPoint = worldEntity.transformToMainWorld(localPoint);
-		return toTopLevelWorldPoint(topWorldView, topLocalPoint);
+		WorldPoint topWorldPoint = toTopLevelWorldPoint(topWorldView, topLocalPoint);
+		return topWorldPoint != null ? new ResolvedPoint(topWorldPoint, topLocalPoint) : null;
+	}
+	public static final class ResolvedPoint {
+		public final WorldPoint worldPoint;
+		public final LocalPoint localPoint;
+		private ResolvedPoint(WorldPoint worldPoint, LocalPoint localPoint) {
+			this.worldPoint = worldPoint;
+			this.localPoint = localPoint;
+		}
 	}
 }
