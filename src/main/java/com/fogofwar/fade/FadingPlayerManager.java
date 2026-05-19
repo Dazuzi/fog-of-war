@@ -1,7 +1,6 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.state.AreaExclusionManager;
-import com.fogofwar.state.RenderDistanceManager;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
@@ -23,7 +22,6 @@ import java.util.Set;
 public class FadingPlayerManager extends LifecycleComponent {
 	private final Client client;
 	private final FogOfWarConfig config;
-	private final RenderDistanceManager renderDistanceManager;
 	private final AreaExclusionManager areaExclusionManager;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
@@ -33,11 +31,10 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private final Set<String> currentPlayerNames = new HashSet<>();
 	private final FadingPlayerPredictor predictor = new FadingPlayerPredictor();
 	@Inject
-	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, RenderDistanceManager renderDistanceManager, AreaExclusionManager areaExclusionManager) {
+	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, AreaExclusionManager areaExclusionManager) {
 		super(eventBus);
 		this.client = client;
 		this.config = config;
-		this.renderDistanceManager = renderDistanceManager;
 		this.areaExclusionManager = areaExclusionManager;
 	}
 	@Override
@@ -61,7 +58,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 			clearAllTracking();
 			return;
 		}
-		int renderDistance = renderDistanceManager.getCurrentRenderDistance();
+		int renderDistance = config.landRenderDistance();
 		int fadeDuration = config.fadeDurationTicks();
 		boolean extrapolate = config.predictMovement();
 		boolean onlyAtLimit = config.onlyFadeAtRenderEdge();

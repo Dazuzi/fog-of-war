@@ -4,7 +4,6 @@ import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.fogofwar.state.RenderCenter;
-import com.fogofwar.state.RenderDistanceManager;
 import net.runelite.api.Client;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
@@ -19,17 +18,15 @@ public class MinimapFogOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final RenderDistanceManager renderDistanceManager;
 	private final AreaExclusionManager areaExclusionManager;
 	private final MinimapClipProvider clipProvider;
 	private final MinimapRenderBoundary renderBoundary;
 	private final MinimapFogMask fogMask;
 	@Inject
-	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderDistanceManager renderDistanceManager, AreaExclusionManager areaExclusionManager, MinimapClipProvider clipProvider) {
+	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, MinimapClipProvider clipProvider) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
-		this.renderDistanceManager = renderDistanceManager;
 		this.areaExclusionManager = areaExclusionManager;
 		this.clipProvider = clipProvider;
 		this.renderBoundary = new MinimapRenderBoundary(client);
@@ -57,7 +54,7 @@ public class MinimapFogOverlay extends Overlay {
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(minimapClipShape);
 		try {
-			int landRadius = renderDistanceManager.getCurrentRenderDistance();
+			int landRadius = config.landRenderDistance();
 			if (rc.isOnWorldEntity()) renderSailingFrame(graphics, showFog, showBorder, rc, minimap, minimapClipShape, landRadius);
 			else renderLandFrame(graphics, showFog, showBorder, rc, minimap, minimapClipShape, landRadius);
 			return null;

@@ -206,28 +206,11 @@ public interface FogOfWarConfig extends Config {
 	)
 	default int sailingRenderDistance() { return 30; }
 	@ConfigItem(
-			keyName = "dynamicRenderDistanceEnabled",
-			name = "Dynamic render distance",
-			description = "In crowded areas, use the furthest loaded player as the current render distance.",
-			section = tweaksSection,
-			position = 2
-	)
-	default boolean dynamicRenderDistanceEnabled() { return false; }
-	@Range(min = 1, max = 500)
-	@ConfigItem(
-			keyName = "dynamicRenderDistanceThreshold",
-			name = "Dynamic threshold",
-			description = "Minimum loaded players before dynamic render distance applies.",
-			section = tweaksSection,
-			position = 3
-	)
-	default int dynamicRenderDistanceThreshold() { return 150; }
-	@ConfigItem(
 			keyName = "debugOverlayEnabled",
 			name = "Debug overlay",
-			description = "Show plane, player count, and current render distance.",
+			description = "Show current plane.",
 			section = tweaksSection,
-			position = 4
+			position = 2
 	)
 	default boolean debugOverlayEnabled() { return false; }
 }

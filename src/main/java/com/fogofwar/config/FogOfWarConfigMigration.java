@@ -9,7 +9,6 @@ public final class FogOfWarConfigMigration {
 	private static final String PLUGIN_KEY = "fogofwarplugin";
 	private static final String OLD_PLUGIN_KEY = "entityrenderdistanceplugin";
 	private static final String SETTINGS_VERSION_KEY = "settingsVersion";
-	private static final int OLD_DYNAMIC_RENDER_DISTANCE_PLAYER_THRESHOLD = 100;
 	private static final String[][] DIRECT_KEYS = {
 			{"onlyInWilderness", "onlyInWilderness"},
 			{"worldFogColour", "worldFogColour"},
@@ -24,9 +23,11 @@ public final class FogOfWarConfigMigration {
 			{"fadeDuration", "fadeDurationTicks"},
 			{"fadeColor", "fadeMarkerColour"},
 			{"renderDistanceRadius", "landRenderDistance"},
-			{"enableDynamicRenderDistance", "dynamicRenderDistanceEnabled"},
-			{"dynamicRenderDistancePlayerThreshold", "dynamicRenderDistanceThreshold"},
 			{"showPlaneDisplay", "debugOverlayEnabled"}
+	};
+	private static final String[] REMOVED_KEYS = {
+			"dynamicRenderDistanceEnabled",
+			"dynamicRenderDistanceThreshold"
 	};
 	private static final String[] OLD_KEYS = {
 			"onlyInWilderness",
@@ -60,19 +61,23 @@ public final class FogOfWarConfigMigration {
 		migratePluginEnabled(configManager);
 		Integer settingsVersion = configManager.getConfiguration(CONFIG_GROUP, SETTINGS_VERSION_KEY, int.class);
 		if (settingsVersion != null && settingsVersion >= SETTINGS_VERSION) {
+			clearRemovedKeys(configManager);
 			clearOldKeys(configManager);
 			return;
 		}
 		if (oldConfig) {
 			for (String[] pair : DIRECT_KEYS) copy(configManager, pair[0], pair[1]);
 			migrateEntityExclusionLimit(configManager);
-			migrateRenderDistanceManagerThreshold(configManager);
 			migrateFogDisplayMode(configManager, "showWorldFog", "showWorldBorder", "worldDisplayMode");
 			migrateFogDisplayMode(configManager, "showMinimapFog", "showMinimapBorder", "minimapDisplayMode");
 			migrateFadingPlayerMode(configManager);
 		}
+		clearRemovedKeys(configManager);
 		clearOldKeys(configManager);
 		configManager.setConfiguration(CONFIG_GROUP, SETTINGS_VERSION_KEY, SETTINGS_VERSION);
+	}
+	private static void clearRemovedKeys(ConfigManager configManager) {
+		for (String key : REMOVED_KEYS) configManager.unsetConfiguration(CONFIG_GROUP, key);
 	}
 	private static void clearOldKeys(ConfigManager configManager) {
 		for (String key : OLD_KEYS) configManager.unsetConfiguration(OLD_CONFIG_GROUP, key);
@@ -110,11 +115,6 @@ public final class FogOfWarConfigMigration {
 		if (configManager.getConfiguration(CONFIG_GROUP, "actorCutoutLimit") != null) return;
 		Boolean value = configManager.getConfiguration(OLD_CONFIG_GROUP, "excludeEntities", boolean.class);
 		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "actorCutoutLimit", toEntityExclusionLimit(value));
-	}
-	private static void migrateRenderDistanceManagerThreshold(ConfigManager configManager) {
-		if (configManager.getConfiguration(CONFIG_GROUP, "dynamicRenderDistanceThreshold") != null) return;
-		Boolean value = configManager.getConfiguration(OLD_CONFIG_GROUP, "enableDynamicRenderDistance", boolean.class);
-		if (value != null && value) configManager.setConfiguration(CONFIG_GROUP, "dynamicRenderDistanceThreshold", OLD_DYNAMIC_RENDER_DISTANCE_PLAYER_THRESHOLD);
 	}
 	private static void migrateFogDisplayMode(ConfigManager configManager, String fogKey, String borderKey, String newKey) {
 		if (configManager.getConfiguration(OLD_CONFIG_GROUP, fogKey) == null && configManager.getConfiguration(OLD_CONFIG_GROUP, borderKey) == null) return;
