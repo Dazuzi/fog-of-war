@@ -11,6 +11,7 @@ class FadingPlayer {
 	@Setter
 	private WorldPoint lastLocation;
 	private final WorldPoint velocity;
+	private final int renderDistance;
 	@Setter
 	private int ticksSinceDisappeared = 0;
 	private int cachedTick = Integer.MIN_VALUE;
@@ -18,10 +19,11 @@ class FadingPlayer {
 	private int cachedBaseRgb;
 	private Color cachedColor;
 	private Color cachedDarkerColor;
-	FadingPlayer(Player player, WorldPoint velocity, WorldPoint initialLocation) {
+	FadingPlayer(Player player, WorldPoint velocity, WorldPoint initialLocation, int renderDistance) {
 		this.player = player;
 		this.velocity = velocity;
 		this.lastLocation = initialLocation;
+		this.renderDistance = renderDistance;
 	}
 	Color getColor(FogOfWarConfig config) {
 		Color base = config.fadeMarkerColour();
