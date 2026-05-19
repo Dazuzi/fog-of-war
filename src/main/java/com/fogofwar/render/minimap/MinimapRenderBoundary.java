@@ -29,10 +29,6 @@ final class MinimapRenderBoundary {
 	}
 	private MinimapPathCache getPathCache(RenderAreaType type) { return type == RenderAreaType.SEA ? seaRenderAreaPath : landRenderAreaPath; }
 	private GeneralPath buildRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
-		if (centerLp == null) {
-			boundaryPoints.clear();
-			return createClippedRenderAreaPath(boundaryPoints, minimapBounds, null, cache);
-		}
 		WorldPoint centerWp = WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane());
 		List<Point> points = getBoundaryPointsWithNulls(rc.getWorldView(), centerWp, centerLp, radius);
 		Point centerPoint = Perspective.localToMinimap(client, centerLp, MINIMAP_PROJECTION_DISTANCE);
@@ -127,7 +123,6 @@ final class MinimapRenderBoundary {
 	}
 	private List<Point> getBoundaryPointsWithNulls(WorldView worldView, WorldPoint center, LocalPoint centerLp, int radius) {
 		boundaryPoints.clear();
-		if (centerLp == null) return boundaryPoints;
 		int sampleRate = Math.max(1, radius / 12);
 		int halfTile = Perspective.LOCAL_HALF_TILE_SIZE;
 		addMinimapPoint(worldView, center, centerLp, -radius, -radius, -halfTile, -halfTile);

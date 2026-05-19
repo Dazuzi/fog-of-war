@@ -155,10 +155,10 @@ public interface FogOfWarConfig extends Config {
 			section = fadingPlayerSection,
 			position = 2
 	)
-	default int fadeDurationTicks() { return 2; }
+	default int fadeDurationTicks() { return 3; }
 	@ConfigItem(
 			keyName = "onlyFadeAtRenderEdge",
-			name = "Render edge only",
+			name = "Render near edge only",
 			description = "Only mark players that disappear near the render-distance edge.",
 			section = fadingPlayerSection,
 			position = 3

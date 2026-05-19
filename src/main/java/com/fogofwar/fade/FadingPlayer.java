@@ -9,7 +9,7 @@ import java.awt.Color;
 class FadingPlayer {
 	private final Player player;
 	@Setter
-	private WorldPoint lastLocation;
+	private WorldPoint markerLocation;
 	private final WorldPoint velocity;
 	private final int renderDistance;
 	@Setter
@@ -22,7 +22,7 @@ class FadingPlayer {
 	FadingPlayer(Player player, WorldPoint velocity, WorldPoint initialLocation, int renderDistance) {
 		this.player = player;
 		this.velocity = velocity;
-		this.lastLocation = initialLocation;
+		this.markerLocation = initialLocation;
 		this.renderDistance = renderDistance;
 	}
 	Color getColor(FogOfWarConfig config) {

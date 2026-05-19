@@ -42,7 +42,7 @@ abstract class AbstractFadingPlayerOverlay extends Overlay {
 		return null;
 	}
 	private void renderPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
-		WorldPoint wp = fadingPlayer.getLastLocation();
+		WorldPoint wp = fadingPlayer.getMarkerLocation();
 		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
 		if (lp == null) return;
 		renderPlayer(graphics, wv, lp, fadingPlayer);

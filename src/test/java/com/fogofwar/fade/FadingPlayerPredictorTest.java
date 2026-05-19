@@ -12,18 +12,17 @@ public class FadingPlayerPredictorTest {
 		assertEquals(new WorldPoint(0, 0, 0), predictor.getVelocity(new WorldPoint(12, 19, 0), null));
 	}
 	@Test
-	public void shouldFadeHonorsRenderEdgeOnly() {
+	public void nearRenderLimitHonorsEdgeAndRunning() {
 		WorldPoint local = new WorldPoint(100, 100, 0);
-		assertTrue(predictor.shouldFade(new WorldPoint(114, 100, 0), local, new WorldPoint(0, 0, 0), true, 15));
-		assertFalse(predictor.shouldFade(new WorldPoint(112, 100, 0), local, new WorldPoint(1, 0, 0), true, 15));
-		assertTrue(predictor.shouldFade(new WorldPoint(113, 100, 0), local, new WorldPoint(2, 0, 0), true, 15));
-		assertTrue(predictor.shouldFade(new WorldPoint(100, 100, 0), local, new WorldPoint(0, 0, 0), false, 15));
+		assertTrue(predictor.isNearRenderLimit(new WorldPoint(114, 100, 0), local, new WorldPoint(0, 0, 0), 15));
+		assertFalse(predictor.isNearRenderLimit(new WorldPoint(112, 100, 0), local, new WorldPoint(1, 0, 0), 15));
+		assertTrue(predictor.isNearRenderLimit(new WorldPoint(113, 100, 0), local, new WorldPoint(2, 0, 0), 15));
 	}
 	@Test
 	public void initialLocationMatchesExtrapolationRules() {
 		WorldPoint local = new WorldPoint(100, 100, 0);
-		assertEquals(new WorldPoint(116, 100, 0), predictor.getInitialFadeLocation(new WorldPoint(114, 100, 0), local, new WorldPoint(1, 0, 0), true, 15));
-		assertEquals(new WorldPoint(114, 100, 0), predictor.getInitialFadeLocation(new WorldPoint(114, 100, 0), local, new WorldPoint(-1, 0, 0), true, 15));
-		assertEquals(new WorldPoint(114, 100, 0), predictor.getInitialFadeLocation(new WorldPoint(114, 100, 0), local, new WorldPoint(1, 0, 0), false, 15));
+		assertEquals(new WorldPoint(116, 100, 0), predictor.getInitialFadeLocation(new WorldPoint(114, 100, 0), local, new WorldPoint(1, 0, 0), true, 15, true));
+		assertEquals(new WorldPoint(114, 100, 0), predictor.getInitialFadeLocation(new WorldPoint(114, 100, 0), local, new WorldPoint(-1, 0, 0), true, 15, true));
+		assertEquals(new WorldPoint(114, 100, 0), predictor.getInitialFadeLocation(new WorldPoint(114, 100, 0), local, new WorldPoint(1, 0, 0), false, 15, true));
 	}
 }

@@ -6,11 +6,10 @@ final class FadingPlayerPredictor {
 				? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
 				: new WorldPoint(0, 0, 0);
 	}
-	boolean shouldFade(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, boolean onlyAtLimit, int renderDistance) {
-		if (!onlyAtLimit) return true;
+	boolean isNearRenderLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, int renderDistance) {
 		return isAtRenderLimit(lastLocation, localPlayerLocation, renderDistance) || isRunningNearLimit(lastLocation, localPlayerLocation, velocity, renderDistance);
 	}
-	WorldPoint getInitialFadeLocation(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, boolean extrapolate, int renderDistance) {
+	WorldPoint getInitialFadeLocation(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, boolean extrapolate, int renderDistance, boolean nearRenderLimit) {
 		if (!extrapolate) return lastLocation;
 		int dx = lastLocation.getX() - localPlayerLocation.getX();
 		int dy = lastLocation.getY() - localPlayerLocation.getY();
@@ -24,7 +23,7 @@ final class FadingPlayerPredictor {
 			return new WorldPoint(predictedNextLocation.getX() + pushX, predictedNextLocation.getY() + pushY, predictedNextLocation.getPlane());
 		}
 		WorldPoint initialFadeLocation = predictedNextLocation;
-		if (isAtRenderLimit(lastLocation, localPlayerLocation, renderDistance) || isRunningNearLimit(lastLocation, localPlayerLocation, velocity, renderDistance)) {
+		if (nearRenderLimit) {
 			int pushX = 0, pushY = 0;
 			if (Math.abs(dx) > Math.abs(dy)) pushX = Integer.signum(dx);
 			else if (Math.abs(dy) > Math.abs(dx)) pushY = Integer.signum(dy);

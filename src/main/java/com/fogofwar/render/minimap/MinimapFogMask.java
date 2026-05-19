@@ -1,5 +1,6 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.render.FogColour;
 import com.fogofwar.render.FogMaskRenderer;
 import com.fogofwar.render.FogPathBuilder;
 import com.fogofwar.render.StrokeCache;
@@ -31,11 +32,11 @@ final class MinimapFogMask {
 	void renderSailingSeaFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary) {
 		Area area = FogMaskRenderer.createDifferenceArea(boundary, innerBoundary);
 		if (area.isEmpty()) return;
-		graphics.setColor(FogMaskRenderer.sailingSea(config.minimapFogColour()));
+		graphics.setColor(FogColour.sailingSea(config.minimapFogColour()));
 		graphics.fill(area);
 	}
 	void renderSailingSeaBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		FogMaskRenderer.drawBorder(graphics, path, FogMaskRenderer.sailingSea(config.minimapBorderColour()), borderStroke, config.minimapBorderThickness());
+		FogMaskRenderer.drawBorder(graphics, path, FogColour.sailingSea(config.minimapBorderColour()), borderStroke, config.minimapBorderThickness());
 	}
 }

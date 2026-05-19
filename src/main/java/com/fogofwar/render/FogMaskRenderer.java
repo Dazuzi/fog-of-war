@@ -18,5 +18,4 @@ public final class FogMaskRenderer {
 		area.subtract(new Area(innerBoundary));
 		return area;
 	}
-	public static Color sailingSea(Color color) { return FogColour.sailingSea(color); }
 }

@@ -1,6 +1,7 @@
 package com.fogofwar.render.world;
 import com.fogofwar.config.EntityExclusionLimit;
 import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.render.FogColour;
 import com.fogofwar.render.FogMaskRenderer;
 import com.fogofwar.render.FogPathBuilder;
 import com.fogofwar.render.StrokeCache;
@@ -41,10 +42,10 @@ final class WorldFogMask {
 		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
 		if (exclusionLimit.isEnabled()) actorCutouts.subtractExclusions(area, viewport, worldView, innerBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
 		if (area.isEmpty()) return;
-		graphics.setColor(FogMaskRenderer.sailingSea(config.worldFogColour()));
+		graphics.setColor(FogColour.sailingSea(config.worldFogColour()));
 		graphics.fill(area);
 	}
 	void renderSailingSeaBorder(Graphics2D graphics, GeneralPath boundary) {
-		FogMaskRenderer.drawBorder(graphics, boundary, FogMaskRenderer.sailingSea(config.worldBorderColour()), borderStroke, config.worldBorderThickness());
+		FogMaskRenderer.drawBorder(graphics, boundary, FogColour.sailingSea(config.worldBorderColour()), borderStroke, config.worldBorderThickness());
 	}
 }

@@ -33,37 +33,26 @@ import java.util.List;
 public class FogOfWarPlugin extends Plugin {
 	private static final String CONFIG_GROUP = FogOfWarConfigMigration.CONFIG_GROUP;
 	@Inject
-	@SuppressWarnings("unused")
 	private FogOfWarConfig config;
 	@Inject
-	@SuppressWarnings("unused")
 	private ClientState clientState;
 	@Inject
-	@SuppressWarnings("unused")
 	private OverlayManager overlayManager;
 	@Inject
-	@SuppressWarnings("unused")
 	private WorldFogOverlay worldOverlay;
 	@Inject
-	@SuppressWarnings("unused")
 	private MinimapFogOverlay minimapOverlay;
 	@Inject
-	@SuppressWarnings("unused")
 	private FadingPlayerManager fadingPlayerManager;
 	@Inject
-	@SuppressWarnings("unused")
 	private FadingPlayerOverlay fadingPlayerOverlay;
 	@Inject
-	@SuppressWarnings("unused")
 	private FadingPlayerMinimapOverlay fadingPlayerMinimapOverlay;
 	@Inject
-	@SuppressWarnings("unused")
 	private AreaExclusionManager areaExclusionManager;
 	@Inject
-	@SuppressWarnings("unused")
 	private VisibleActorTracker visibleActorTracker;
 	@Inject
-	@SuppressWarnings("unused")
 	private DebugOverlay debugOverlay;
 	private OverlayToggle worldOverlayToggle;
 	private OverlayToggle minimapOverlayToggle;

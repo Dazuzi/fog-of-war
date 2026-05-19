@@ -9,6 +9,7 @@ public enum EntityExclusionLimit {
 	LIMIT_96("96", 96),
 	LIMIT_128("128", 128),
 	LIMIT_192("192", 192),
+	LIMIT_224("224", 224),
 	ALL("All", Integer.MAX_VALUE);
 	private final String name;
 	@Getter

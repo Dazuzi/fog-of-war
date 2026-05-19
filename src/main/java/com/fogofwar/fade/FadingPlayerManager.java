@@ -51,7 +51,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 	public void onGameTick(GameTick event) {
 		Player localPlayer = client.getLocalPlayer();
 		WorldView worldView = client.getTopLevelWorldView();
-		WorldPoint localPlayerLocation = localPlayer != null && worldView != null ? WorldEntityCoords.playerToTopLevel(localPlayer, localPlayer.getWorldView(), worldView) : null;
+		WorldPoint localPlayerLocation = localPlayer != null && worldView != null ? WorldEntityCoords.playerToTopLevel(localPlayer, null, worldView) : null;
 		if (client.getGameState() != GameState.LOGGED_IN || localPlayer == null || worldView == null || localPlayerLocation == null) {
 			clearAllTracking();
 			return;
@@ -78,12 +78,13 @@ public class FadingPlayerManager extends LifecycleComponent {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
 			if (fp.getTicksSinceDisappeared() > fadeDuration) return true;
-			if (fp.getTicksSinceDisappeared() > 1 && fp.getLastLocation().distanceTo(localPlayerLocation) <= fp.getRenderDistance()) return true;
+			WorldPoint markerLocation = fp.getMarkerLocation();
+			if (fp.getTicksSinceDisappeared() > 1 && markerLocation.distanceTo(localPlayerLocation) <= fp.getRenderDistance()) return true;
 			if (extrapolate) {
-				fp.setLastLocation(new WorldPoint(
-						fp.getLastLocation().getX() + fp.getVelocity().getX(),
-						fp.getLastLocation().getY() + fp.getVelocity().getY(),
-						fp.getLastLocation().getPlane()));
+				fp.setMarkerLocation(new WorldPoint(
+						markerLocation.getX() + fp.getVelocity().getX(),
+						markerLocation.getY() + fp.getVelocity().getY(),
+						markerLocation.getPlane()));
 			}
 			return false;
 		});
@@ -91,11 +92,13 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private void updatePlayerTracking(boolean extrapolate, boolean onlyAtLimit, Player localPlayer, WorldView worldView, WorldPoint localPlayerLocation) {
 		currentPlayerLocations.clear();
 		currentPlayerNames.clear();
-		trackPlayers(localPlayer, worldView, config.landRenderDistance());
+		trackPlayers(localPlayer, worldView, worldView, config.landRenderDistance());
 		int boatRenderDistance = isOnWorldEntity(localPlayer) ? config.sailingRenderDistance() : config.landRenderDistance();
 		for (WorldEntity worldEntity : worldView.worldEntities()) {
-			if (worldEntity == null || worldEntity.getWorldView() == null) continue;
-			trackPlayers(localPlayer, worldEntity.getWorldView(), boatRenderDistance);
+			if (worldEntity == null) continue;
+			WorldView entityWorldView = worldEntity.getWorldView();
+			if (entityWorldView == null) continue;
+			trackPlayers(localPlayer, entityWorldView, worldView, boatRenderDistance);
 		}
 		for (Map.Entry<Player, TrackedPlayer> entry : lastTickPlayerLocations.entrySet()) {
 			Player player = entry.getKey();
@@ -108,8 +111,9 @@ public class FadingPlayerManager extends LifecycleComponent {
 			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayer != null ? twoTicksAgoPlayer.getLocation() : null;
 			WorldPoint velocity = predictor.getVelocity(lastLocation, twoTicksAgoLocation);
 			int renderDistance = lastTickPlayer.getRenderDistance();
-			if (!predictor.shouldFade(lastLocation, localPlayerLocation, velocity, onlyAtLimit, renderDistance)) continue;
-			WorldPoint initialFadeLocation = predictor.getInitialFadeLocation(lastLocation, localPlayerLocation, velocity, extrapolate, renderDistance);
+			boolean nearRenderLimit = (onlyAtLimit || extrapolate) && predictor.isNearRenderLimit(lastLocation, localPlayerLocation, velocity, renderDistance);
+			if (onlyAtLimit && !nearRenderLimit) continue;
+			WorldPoint initialFadeLocation = predictor.getInitialFadeLocation(lastLocation, localPlayerLocation, velocity, extrapolate, renderDistance, nearRenderLimit);
 			fadingPlayers.put(player, new FadingPlayer(player, velocity, initialFadeLocation, renderDistance));
 		}
 		Map<Player, TrackedPlayer> tmp = twoTicksAgoPlayerLocations;
@@ -121,10 +125,10 @@ public class FadingPlayerManager extends LifecycleComponent {
 			return name != null && currentPlayerNames.contains(name);
 		});
 	}
-	private void trackPlayers(Player localPlayer, WorldView worldView, int renderDistance) {
+	private void trackPlayers(Player localPlayer, WorldView worldView, WorldView topWorldView, int renderDistance) {
 		for (Player player : worldView.players()) {
 			if (player == null || player == localPlayer) continue;
-			WorldPoint playerLocation = WorldEntityCoords.playerToTopLevel(player, worldView, client.getTopLevelWorldView());
+			WorldPoint playerLocation = WorldEntityCoords.playerToTopLevel(player, worldView, topWorldView);
 			if (playerLocation != null) currentPlayerLocations.put(player, new TrackedPlayer(playerLocation, renderDistance));
 			if (player.getName() != null) currentPlayerNames.add(player.getName());
 		}
