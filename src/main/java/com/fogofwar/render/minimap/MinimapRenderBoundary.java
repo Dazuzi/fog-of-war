@@ -22,12 +22,12 @@ final class MinimapRenderBoundary {
 		seaRenderAreaPath.clear();
 		landRenderAreaPath.clear();
 	}
-	GeneralPath createSeaRenderAreaPath(RenderCenter rc, int radius, int landRadius, Rectangle minimapBounds) {
-		LocalPoint centerLp = rc.snappedCenter(radius, landRadius);
+	GeneralPath createSeaRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
+		LocalPoint centerLp = rc.snappedCenter();
 		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, seaRenderAreaPath);
 	}
 	GeneralPath createLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
-		LocalPoint centerLp = rc.snappedCenter(radius, radius);
+		LocalPoint centerLp = rc.snappedCenter();
 		return createRenderAreaPath(rc, centerLp, radius, minimapBounds, landRenderAreaPath);
 	}
 	private GeneralPath createRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {

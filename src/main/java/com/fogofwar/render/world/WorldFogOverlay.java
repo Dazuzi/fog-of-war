@@ -66,7 +66,7 @@ public class WorldFogOverlay extends Overlay {
 		else renderLandFrame(graphics, showFog, showBorder, rc, worldView, plane, landRadius);
 	}
 	private void renderLandFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, WorldView worldView, int plane, int landRadius) {
-		LocalPoint landCenter = rc.snappedCenter(landRadius, landRadius);
+		LocalPoint landCenter = rc.snappedCenter();
 		GeneralPath landBoundary = renderBoundary.createLandRenderAreaBoundary(worldView, landCenter, plane, landRadius);
 		if (landBoundary == null) {
 			if (showFog) fogMask.renderFullFog(graphics, viewport);
@@ -77,7 +77,7 @@ public class WorldFogOverlay extends Overlay {
 	}
 	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, WorldView worldView, int plane, int landRadius) {
 		int seaRadius = config.sailingRenderDistance();
-		LocalPoint seaCenter = rc.snappedCenter(seaRadius, landRadius);
+		LocalPoint seaCenter = rc.snappedCenter();
 		GeneralPath seaBoundary = renderBoundary.createSeaRenderAreaBoundary(worldView, seaCenter, plane, seaRadius);
 		if (seaBoundary == null) {
 			if (showFog) fogMask.renderFullFog(graphics, viewport);
@@ -86,7 +86,7 @@ public class WorldFogOverlay extends Overlay {
 		LocalPoint landCenter = null;
 		GeneralPath landBoundary = null;
 		if (config.showWorldLandAreaWhileSailing()) {
-			landCenter = rc.snappedCenter(landRadius, landRadius);
+			landCenter = rc.snappedCenter();
 			landBoundary = renderBoundary.createLandRenderAreaBoundary(worldView, landCenter, plane, landRadius);
 		}
 		if (showFog) {

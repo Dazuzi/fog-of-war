@@ -71,7 +71,7 @@ public class MinimapFogOverlay extends Overlay {
 	}
 	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, Widget minimap, Shape minimapClipShape, int landRadius) {
 		int seaRadius = config.sailingRenderDistance();
-		GeneralPath seaPath = renderBoundary.createSeaRenderAreaPath(rc, seaRadius, landRadius, minimap.getBounds());
+		GeneralPath seaPath = renderBoundary.createSeaRenderAreaPath(rc, seaRadius, minimap.getBounds());
 		if (seaPath == null) {
 			if (showFog) fogMask.renderFullFog(graphics, minimapClipShape);
 			return;

@@ -35,8 +35,8 @@ public class RenderCenter {
 		WorldPoint boatWp = WorldPoint.fromLocal(topWv, boatLp.getX(), boatLp.getY(), topWv.getPlane());
 		return new RenderCenter(topWv, boatWp, boatLp, boatTarget, true);
 	}
-	public LocalPoint snappedCenter(int radius, int landRadius) {
-		LocalPoint lp = onWorldEntity && radius > landRadius ? targetLocalPoint : localPoint;
+	public LocalPoint snappedCenter() {
+		LocalPoint lp = onWorldEntity ? targetLocalPoint : localPoint;
 		if (lp == null) return null;
 		return new LocalPoint(snapAxis(lp.getX()), snapAxis(lp.getY()), worldView);
 	}
