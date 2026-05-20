@@ -9,11 +9,13 @@ import java.awt.Rectangle;
 import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
-final class WorldRenderBoundary {
+final class WorldRenderBoundary implements BoundaryPathBuilder.Strategy {
 	private final Client client;
 	private final List<Point> boundaryPoints = new ArrayList<>(256);
 	private final GeneralPath seaRenderAreaBoundary = new GeneralPath();
 	private final GeneralPath landRenderAreaBoundary = new GeneralPath();
+	private Rectangle currentViewport;
+	private Point currentCenterPoint;
 	WorldRenderBoundary(Client client) { this.client = client; }
 	GeneralPath createSeaRenderAreaBoundary(WorldView worldView, LocalPoint centerLp, int plane, int radius, Rectangle viewport) {
 		return buildRenderAreaBoundary(worldView, centerLp, plane, radius, viewport, seaRenderAreaBoundary);
@@ -37,18 +39,23 @@ final class WorldRenderBoundary {
 		for (int i = 0; i < sampleCount; i++) addPoint(worldView, minX, minY + i * step, plane);
 		Point centerPoint = Perspective.localToCanvas(client, centerLp, plane);
 		if (centerPoint == null) centerPoint = new Point(viewport.x + viewport.width / 2, viewport.y + viewport.height - 1);
-		return createPathFromPoints(path, viewport, centerPoint);
+		currentViewport = viewport;
+		currentCenterPoint = centerPoint;
+		double arcRadius = Math.max(viewport.width, viewport.height) * 2.0;
+		return BoundaryPathBuilder.build(path, boundaryPoints, centerPoint.getX(), centerPoint.getY(), arcRadius, this);
 	}
 	private void addPoint(WorldView worldView, int localX, int localY, int plane) {
 		LocalPoint lp = new LocalPoint(localX, localY, worldView);
 		boundaryPoints.add(Perspective.localToCanvas(client, lp, plane));
 	}
-	private GeneralPath createPathFromPoints(GeneralPath path, Rectangle viewport, Point centerPoint) {
-		double arcRadius = Math.max(viewport.width, viewport.height) * 2.0;
-		return BoundaryPathBuilder.build(path, boundaryPoints, centerPoint.getX(), centerPoint.getY(), arcRadius, point -> point, p -> createFullViewportCoveragePath(p, viewport), p -> isValidPath(p, centerPoint), p -> createFullViewportCoveragePath(p, viewport));
-	}
-	private boolean isValidPath(GeneralPath path, Point centerPoint) { return path != null && path.contains(centerPoint.getX(), centerPoint.getY()); }
-	private GeneralPath createFullViewportCoveragePath(GeneralPath path, Rectangle viewport) {
+	@Override
+	public GeneralPath coverage(GeneralPath path) { return fullViewportCoveragePath(path); }
+	@Override
+	public boolean isValid(GeneralPath path) { return path != null && path.contains(currentCenterPoint.getX(), currentCenterPoint.getY()); }
+	@Override
+	public GeneralPath fallback(GeneralPath path) { return fullViewportCoveragePath(path); }
+	private GeneralPath fullViewportCoveragePath(GeneralPath path) {
+		Rectangle viewport = currentViewport;
 		path.reset();
 		path.moveTo(viewport.x - 1, viewport.y - 1);
 		path.lineTo(viewport.x + viewport.width + 1, viewport.y - 1);

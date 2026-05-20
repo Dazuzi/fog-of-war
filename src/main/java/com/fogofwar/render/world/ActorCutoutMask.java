@@ -38,6 +38,7 @@ final class ActorCutoutMask {
 	private final List<ActorCutoutCandidate> exclusionCandidates = new ArrayList<>(256);
 	private boolean[] usedBuckets = new boolean[0];
 	private Rectangle viewport;
+	private Player localPlayer;
 	private int exclusionCandidateCount;
 	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
 	private boolean retainHullCache;
@@ -56,6 +57,7 @@ final class ActorCutoutMask {
 	}
 	void subtractExclusions(Area fogArea, Rectangle viewport, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, int limit) {
 		this.viewport = viewport;
+		this.localPlayer = client.getLocalPlayer();
 		retainHullCache = true;
 		boolean all = limit == Integer.MAX_VALUE;
 		int bucketColumns = all ? 1 : Math.max(1, (viewport.width + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
@@ -67,7 +69,10 @@ final class ActorCutoutMask {
 				exclusionCandidates.subList(0, exclusionCandidateCount).sort(EXCLUSION_CANDIDATE_ORDER);
 				subtractSelectedExclusionAreas(fogArea, boundary, limit, bucketColumns);
 			}
-		} finally { clearExclusionCandidates(); }
+		} finally {
+			clearExclusionCandidates();
+			this.localPlayer = null;
+		}
 	}
 	private void updateCameraState() {
 		lastCamX = client.getCameraX();
@@ -86,7 +91,6 @@ final class ActorCutoutMask {
 	private void collectExclusionCandidates(WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, boolean ranked, int bucketColumns) {
 		exclusionCandidateCount = 0;
 		int localRadius = radius * Perspective.LOCAL_TILE_SIZE + Perspective.LOCAL_HALF_TILE_SIZE;
-		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer != null) collectExclusionCandidate(localPlayer, worldView, boundary, centerLp, plane, localRadius, ranked, bucketColumns);
 		for (Actor actor : visibleActorTracker.getVisibleActors()) {
 			if (actor == localPlayer) continue;
@@ -95,7 +99,7 @@ final class ActorCutoutMask {
 	}
 	private void collectExclusionCandidate(Actor actor, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int localRadius, boolean ranked, int bucketColumns) {
 		if (actor == null) return;
-		boolean priority = actor == client.getLocalPlayer();
+		boolean priority = actor == localPlayer;
 		WorldEntityCoords.ResolvedPoint location = WorldEntityCoords.resolveTopLevel(actor, worldView);
 		if (location == null || location.worldPoint.getPlane() != plane) return;
 		ActorHullCache.Entry cached = hullCache.get(actor);
@@ -144,7 +148,7 @@ final class ActorCutoutMask {
 		return Math.max(dx, dy) - localRadius;
 	}
 	private int getCandidateScore(Actor actor, boolean hit, int edgeDistance) {
-		if (actor == client.getLocalPlayer()) return PRIORITY_SCORE;
+		if (actor == localPlayer) return PRIORITY_SCORE;
 		int score = Math.abs(edgeDistance);
 		if (edgeDistance < 0) score += Perspective.LOCAL_TILE_SIZE;
 		if (!(actor instanceof Player)) score += Perspective.LOCAL_TILE_SIZE / 2;
@@ -185,7 +189,7 @@ final class ActorCutoutMask {
 		int selected = 0;
 		for (int i = 0; i < exclusionCandidateCount && selected < limit; i++) {
 			ActorCutoutCandidate candidate = exclusionCandidates.get(i);
-			if (candidate.actor != client.getLocalPlayer()) continue;
+			if (candidate.actor != localPlayer) continue;
 			Area entryArea = getCandidateArea(candidate, boundary);
 			if (entryArea == null) continue;
 			candidate.selected = true;
@@ -231,7 +235,7 @@ final class ActorCutoutMask {
 		cached.camPitch = lastCamPitch;
 		cached.camYaw = lastCamYaw;
 		if (!viewport.intersects(bounds)) return null;
-		if (candidate.actor != client.getLocalPlayer() && boundary.contains(bounds)) return null;
+		if (candidate.actor != localPlayer && boundary.contains(bounds)) return null;
 		cached.area = new Area(hull);
 		return cached.area;
 	}

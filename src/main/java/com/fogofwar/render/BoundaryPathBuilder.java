@@ -2,18 +2,21 @@ package com.fogofwar.render;
 import net.runelite.api.Point;
 import java.awt.geom.GeneralPath;
 import java.util.List;
-import java.util.function.Function;
-import java.util.function.Predicate;
 public final class BoundaryPathBuilder {
-	private BoundaryPathBuilder() {}
-	public static GeneralPath build(GeneralPath path, List<Point> points, double arcCenterX, double arcCenterY, double arcRadius, Function<Point, Point> transform, Function<GeneralPath, GeneralPath> coveragePath, Predicate<GeneralPath> validator, Function<GeneralPath, GeneralPath> invalidFallback) {
-		GeneralPath result = buildPath(path, points, arcCenterX, arcCenterY, arcRadius, transform, coveragePath, false);
-		if (validator.test(result)) return result;
-		result = buildPath(path, points, arcCenterX, arcCenterY, arcRadius, transform, coveragePath, true);
-		if (validator.test(result)) return result;
-		return invalidFallback.apply(result);
+	public interface Strategy {
+		GeneralPath coverage(GeneralPath path);
+		boolean isValid(GeneralPath path);
+		GeneralPath fallback(GeneralPath path);
 	}
-	private static GeneralPath buildPath(GeneralPath path, List<Point> points, double arcCenterX, double arcCenterY, double arcRadius, Function<Point, Point> transform, Function<GeneralPath, GeneralPath> coveragePath, boolean reverseArc) {
+	private BoundaryPathBuilder() {}
+	public static GeneralPath build(GeneralPath path, List<Point> points, double arcCenterX, double arcCenterY, double arcRadius, Strategy strategy) {
+		GeneralPath result = buildPath(path, points, arcCenterX, arcCenterY, arcRadius, strategy, false);
+		if (strategy.isValid(result)) return result;
+		result = buildPath(path, points, arcCenterX, arcCenterY, arcRadius, strategy, true);
+		if (strategy.isValid(result)) return result;
+		return strategy.fallback(result);
+	}
+	private static GeneralPath buildPath(GeneralPath path, List<Point> points, double arcCenterX, double arcCenterY, double arcRadius, Strategy strategy, boolean reverseArc) {
 		int n = points.size();
 		int firstVisible = -1;
 		int visibleCount = 0;
@@ -23,10 +26,10 @@ public final class BoundaryPathBuilder {
 				visibleCount++;
 			}
 		}
-		if (visibleCount == 0) return coveragePath.apply(path);
+		if (visibleCount == 0) return strategy.coverage(path);
 		path.reset();
-		if (visibleCount == n) return buildCompletePath(path, points, transform);
-		Point first = transform.apply(points.get(firstVisible));
+		if (visibleCount == n) return buildCompletePath(path, points);
+		Point first = points.get(firstVisible);
 		path.moveTo(first.getX(), first.getY());
 		for (int i = 0; i < n; i++) {
 			int currentIndex = (firstVisible + i) % n;
@@ -34,23 +37,20 @@ public final class BoundaryPathBuilder {
 			Point p1 = points.get(currentIndex);
 			Point p2 = points.get(nextIndex);
 			if (p1 == null) continue;
-			if (p2 != null) {
-				Point p = transform.apply(p2);
-				path.lineTo(p.getX(), p.getY());
-			} else {
+			if (p2 != null) path.lineTo(p2.getX(), p2.getY());
+			else {
 				int nextVisibleIndex = findNextVisibleIndex(points, currentIndex, n);
-				if (nextVisibleIndex != -1) addArcToPath(path, transform.apply(p1), transform.apply(points.get(nextVisibleIndex)), arcCenterX, arcCenterY, arcRadius, reverseArc);
+				if (nextVisibleIndex != -1) addArcToPath(path, p1, points.get(nextVisibleIndex), arcCenterX, arcCenterY, arcRadius, reverseArc);
 			}
 		}
 		path.closePath();
 		return path;
 	}
-	private static GeneralPath buildCompletePath(GeneralPath path, List<Point> points, Function<Point, Point> transform) {
-		path.reset();
-		Point first = transform.apply(points.get(0));
+	private static GeneralPath buildCompletePath(GeneralPath path, List<Point> points) {
+		Point first = points.get(0);
 		path.moveTo(first.getX(), first.getY());
 		for (int i = 1; i < points.size(); i++) {
-			Point point = transform.apply(points.get(i));
+			Point point = points.get(i);
 			path.lineTo(point.getX(), point.getY());
 		}
 		path.closePath();
