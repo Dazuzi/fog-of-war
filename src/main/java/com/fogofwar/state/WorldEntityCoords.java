@@ -2,18 +2,33 @@ package com.fogofwar.state;
 import net.runelite.api.Actor;
 import net.runelite.api.Player;
 import net.runelite.api.WorldEntity;
+import net.runelite.api.WorldEntityConfig;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 public final class WorldEntityCoords {
+	private static final int SHIP_ENTITY_CATEGORY = 2395;
 	private WorldEntityCoords() {}
 	public static WorldEntity getWorldEntity(WorldView sourceWorldView, WorldView topWorldView) {
 		if (sourceWorldView == null || topWorldView == null || sourceWorldView.isTopLevel()) return null;
 		return topWorldView.worldEntities().byIndex(sourceWorldView.getId());
 	}
+	public static WorldEntity getPlayerWorldEntity(Player player, WorldView topWorldView) {
+		if (player == null) return null;
+		return getWorldEntity(player.getWorldView(), topWorldView);
+	}
 	public static WorldPoint toTopLevelWorldPoint(WorldView topWorldView, LocalPoint localPoint) {
 		if (topWorldView == null || localPoint == null) return null;
 		return WorldPoint.fromLocal(topWorldView, localPoint.getX(), localPoint.getY(), topWorldView.getPlane());
+	}
+	public static WorldEntity getPlayerShip(Player player, WorldView topWorldView) {
+		WorldEntity worldEntity = getPlayerWorldEntity(player, topWorldView);
+		return isShip(worldEntity) ? worldEntity : null;
+	}
+	public static boolean isPlayerOnShip(Player player, WorldView topWorldView) { return getPlayerShip(player, topWorldView) != null; }
+	public static boolean isShip(WorldEntity worldEntity) {
+		WorldEntityConfig config = worldEntity != null ? worldEntity.getConfig() : null;
+		return config != null && config.getCategory() == SHIP_ENTITY_CATEGORY;
 	}
 	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView topWorldView) { return resolveTopLevel(actor, null, topWorldView); }
 	public static WorldPoint playerToTopLevel(Player player, WorldView sourceWorldView, WorldView topWorldView) {

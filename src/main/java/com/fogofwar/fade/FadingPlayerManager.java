@@ -134,8 +134,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 		}
 	}
 	private boolean isOnWorldEntity(Player player) {
-		WorldView worldView = player.getWorldView();
-		return worldView != null && !worldView.isTopLevel();
+		return WorldEntityCoords.isPlayerOnShip(player, client.getTopLevelWorldView());
 	}
 	@Getter
 	private static class TrackedPlayer {

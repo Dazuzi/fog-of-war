@@ -35,8 +35,12 @@ public final class RenderCenter {
 			if (wp == null || lp == null) return null;
 			return new RenderCenter(topWv, wp, lp, lp, false);
 		}
-		WorldEntity we = WorldEntityCoords.getWorldEntity(pwv, topWv);
+		WorldEntity we = WorldEntityCoords.getPlayerWorldEntity(p, topWv);
 		if (we == null) return null;
+		if (!WorldEntityCoords.isShip(we)) {
+			WorldEntityCoords.ResolvedPoint point = WorldEntityCoords.resolveTopLevel(p, topWv);
+			return point != null ? new RenderCenter(topWv, point.worldPoint, point.localPoint, point.localPoint, false) : null;
+		}
 		LocalPoint boatLp = we.getLocalLocation();
 		if (boatLp == null) return null;
 		LocalPoint boatTarget = we.getTargetLocation();
