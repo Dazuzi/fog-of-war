@@ -14,6 +14,7 @@ import com.fogofwar.render.world.WorldFogOverlay;
 import com.fogofwar.render.world.VisibleActorTracker;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
+import com.fogofwar.state.RenderCenterProvider;
 import com.google.inject.Provides;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
@@ -53,6 +54,8 @@ public class FogOfWarPlugin extends Plugin {
 	@Inject
 	private AreaExclusionManager areaExclusionManager;
 	@Inject
+	private RenderCenterProvider renderCenterProvider;
+	@Inject
 	private VisibleActorTracker visibleActorTracker;
 	@Inject
 	private DebugOverlay debugOverlay;
@@ -79,6 +82,7 @@ public class FogOfWarPlugin extends Plugin {
 				new ToggleSpec(new OverlayToggle(overlayManager, fadingPlayerMinimapOverlay), state -> state.fadingMinimapActive));
 		lifecycleComponents = List.of(
 				new LifecycleSpec(areaExclusionManager, state -> state.overlayActive),
+				new LifecycleSpec(renderCenterProvider, state -> state.overlayActive),
 				new LifecycleSpec(fadingPlayerManager, state -> state.fadingActive),
 				new LifecycleSpec(visibleActorTracker, state -> state.visibleActorTrackingActive));
 	}

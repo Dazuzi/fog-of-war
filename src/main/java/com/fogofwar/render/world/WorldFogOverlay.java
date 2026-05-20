@@ -4,6 +4,7 @@ import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.fogofwar.state.RenderCenter;
+import com.fogofwar.state.RenderCenterProvider;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
@@ -20,16 +21,18 @@ public class WorldFogOverlay extends Overlay {
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final AreaExclusionManager areaExclusionManager;
+	private final RenderCenterProvider renderCenterProvider;
 	private final Rectangle viewport = new Rectangle();
 	private final WorldRenderBoundary renderBoundary;
 	private final WorldFogMask fogMask;
 	private final ActorCutoutMask actorCutouts;
 	@Inject
-	public WorldFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, VisibleActorTracker visibleActorTracker) {
+	public WorldFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, RenderCenterProvider renderCenterProvider, VisibleActorTracker visibleActorTracker) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.areaExclusionManager = areaExclusionManager;
+		this.renderCenterProvider = renderCenterProvider;
 		this.renderBoundary = new WorldRenderBoundary(client);
 		this.fogMask = new WorldFogMask(config);
 		this.actorCutouts = new ActorCutoutMask(client, visibleActorTracker);
@@ -54,7 +57,7 @@ public class WorldFogOverlay extends Overlay {
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
 		if (!showFog && !showBorder) return;
-		RenderCenter rc = RenderCenter.resolve(client);
+		RenderCenter rc = renderCenterProvider.get();
 		if (rc == null) return;
 		WorldView worldView = rc.getWorldView();
 		int landRadius = config.landRenderDistance();

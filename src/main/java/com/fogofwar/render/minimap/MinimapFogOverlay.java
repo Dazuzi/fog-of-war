@@ -4,6 +4,7 @@ import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import com.fogofwar.state.RenderCenter;
+import com.fogofwar.state.RenderCenterProvider;
 import net.runelite.api.Client;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
@@ -19,15 +20,17 @@ public class MinimapFogOverlay extends Overlay {
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final AreaExclusionManager areaExclusionManager;
+	private final RenderCenterProvider renderCenterProvider;
 	private final MinimapClipProvider clipProvider;
 	private final MinimapRenderBoundary renderBoundary;
 	private final MinimapFogMask fogMask;
 	@Inject
-	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, MinimapClipProvider clipProvider) {
+	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, RenderCenterProvider renderCenterProvider, MinimapClipProvider clipProvider) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.areaExclusionManager = areaExclusionManager;
+		this.renderCenterProvider = renderCenterProvider;
 		this.clipProvider = clipProvider;
 		this.renderBoundary = new MinimapRenderBoundary(client);
 		this.fogMask = new MinimapFogMask(config);
@@ -48,7 +51,7 @@ public class MinimapFogOverlay extends Overlay {
 		if (!showFog && !showBorder) return null;
 		Widget minimap = MinimapWidgetProvider.getMinimapWidget(client);
 		if (minimap == null || minimap.isHidden()) return null;
-		RenderCenter rc = RenderCenter.resolve(client);
+		RenderCenter rc = renderCenterProvider.get();
 		if (rc == null) return null;
 		Shape minimapClipShape = clipProvider.getClipShape(minimap);
 		Shape oldClip = graphics.getClip();

@@ -1,25 +1,29 @@
 package com.fogofwar.state;
-import com.google.common.collect.ImmutableSet;
 import lombok.Value;
 import net.runelite.api.coords.WorldPoint;
-import java.util.Set;
 @Value
 public class ExcludedArea {
 	int minX;
 	int minY;
 	int maxX;
 	int maxY;
-	Set<Integer> planes;
-	public ExcludedArea(int minX, int minY, int maxX, int maxY, Integer... planes) {
+	int planeMask;
+	public ExcludedArea(int minX, int minY, int maxX, int maxY, int... planes) {
 		this.minX = minX;
 		this.minY = minY;
 		this.maxX = maxX;
 		this.maxY = maxY;
-		this.planes = ImmutableSet.copyOf(planes);
+		this.planeMask = planeMask(planes);
 	}
 	public boolean contains(WorldPoint point) {
-		return this.planes.contains(point.getPlane()) &&
+		int plane = point.getPlane();
+		return plane >= 0 && plane < Integer.SIZE && (planeMask & (1 << plane)) != 0 &&
 				point.getX() >= minX && point.getX() <= maxX &&
 				point.getY() >= minY && point.getY() <= maxY;
+	}
+	private static int planeMask(int... planes) {
+		int mask = 0;
+		for (int plane : planes) { if (plane >= 0 && plane < Integer.SIZE) mask |= 1 << plane; }
+		return mask;
 	}
 }
