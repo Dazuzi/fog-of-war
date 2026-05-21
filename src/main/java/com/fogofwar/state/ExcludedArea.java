@@ -1,13 +1,11 @@
 package com.fogofwar.state;
-import lombok.Value;
 import net.runelite.api.coords.WorldPoint;
-@Value
-public class ExcludedArea {
-	int minX;
-	int minY;
-	int maxX;
-	int maxY;
-	int planeMask;
+public final class ExcludedArea {
+	private final int minX;
+	private final int minY;
+	private final int maxX;
+	private final int maxY;
+	private final int planeMask;
 	public ExcludedArea(int minX, int minY, int maxX, int maxY, int... planes) {
 		this.minX = minX;
 		this.minY = minY;

@@ -30,7 +30,7 @@ public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 	@Override
 	Dimension renderPlayers(Graphics2D graphics, WorldView wv, Collection<FadingPlayer> fadingPlayers) {
 		Widget minimapWidget = MinimapWidgetProvider.getMinimapWidget(client);
-		if (minimapWidget == null) return null;
+		if (minimapWidget == null || minimapWidget.isHidden()) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(clipProvider.getClipShape(minimapWidget));
 		try {

@@ -21,7 +21,7 @@ public final class WorldEntityCoords {
 		if (topWorldView == null || localPoint == null) return null;
 		return WorldPoint.fromLocal(topWorldView, localPoint.getX(), localPoint.getY(), topWorldView.getPlane());
 	}
-	public static WorldEntity getPlayerShip(Player player, WorldView topWorldView) {
+	private static WorldEntity getPlayerShip(Player player, WorldView topWorldView) {
 		WorldEntity worldEntity = getPlayerWorldEntity(player, topWorldView);
 		return isShip(worldEntity) ? worldEntity : null;
 	}

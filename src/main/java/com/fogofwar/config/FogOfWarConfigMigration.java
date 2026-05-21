@@ -106,7 +106,7 @@ public final class FogOfWarConfigMigration {
 		if (minimap) return FadingPlayerMode.MINIMAP;
 		return FadingPlayerMode.OFF;
 	}
-	static EntityExclusionLimit toEntityExclusionLimit() { return EntityExclusionLimit.LIMIT_64; }
+	static EntityExclusionLimit toEntityExclusionLimit(boolean enabled) { return enabled ? EntityExclusionLimit.LIMIT_64 : EntityExclusionLimit.NONE; }
 	private static void copy(ConfigManager configManager, String oldKey, String newKey) {
 		String value = configManager.getConfiguration(OLD_CONFIG_GROUP, oldKey);
 		if (value != null && configManager.getConfiguration(CONFIG_GROUP, newKey) == null) configManager.setConfiguration(CONFIG_GROUP, newKey, value);
@@ -114,7 +114,7 @@ public final class FogOfWarConfigMigration {
 	private static void migrateEntityExclusionLimit(ConfigManager configManager) {
 		if (configManager.getConfiguration(CONFIG_GROUP, "actorCutoutLimit") != null) return;
 		Boolean value = configManager.getConfiguration(OLD_CONFIG_GROUP, "excludeEntities", boolean.class);
-		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "actorCutoutLimit", toEntityExclusionLimit());
+		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "actorCutoutLimit", toEntityExclusionLimit(value));
 	}
 	private static void migrateFogDisplayMode(ConfigManager configManager, String fogKey, String borderKey, String newKey) {
 		if (configManager.getConfiguration(OLD_CONFIG_GROUP, fogKey) == null && configManager.getConfiguration(OLD_CONFIG_GROUP, borderKey) == null) return;

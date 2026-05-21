@@ -19,7 +19,7 @@ public class FogOfWarConfigMigrationTest {
 	}
 	@Test
 	public void toEntityExclusionLimitKeepsOldToggleSemantics() {
-		assertEquals(EntityExclusionLimit.LIMIT_64, FogOfWarConfigMigration.toEntityExclusionLimit());
-		assertEquals(EntityExclusionLimit.NONE, FogOfWarConfigMigration.toEntityExclusionLimit());
+		assertEquals(EntityExclusionLimit.LIMIT_64, FogOfWarConfigMigration.toEntityExclusionLimit(true));
+		assertEquals(EntityExclusionLimit.NONE, FogOfWarConfigMigration.toEntityExclusionLimit(false));
 	}
 }
