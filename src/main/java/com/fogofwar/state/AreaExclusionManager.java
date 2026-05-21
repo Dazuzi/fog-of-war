@@ -1,6 +1,7 @@
 package com.fogofwar.state;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
+import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.coords.LocalPoint;
@@ -28,6 +29,8 @@ public class AreaExclusionManager extends LifecycleComponent {
 	private final Client client;
 	@Getter
 	private boolean playerInExcludedArea = false;
+	@Setter
+	private Runnable onTransition;
 	@Inject
 	public AreaExclusionManager(Client client, EventBus eventBus) {
 		super(eventBus);
@@ -38,19 +41,24 @@ public class AreaExclusionManager extends LifecycleComponent {
 		if (client.getGameState() == GameState.LOGGED_IN) checkArea();
 	}
 	@Override
-	protected void onStop(boolean wasStarted) { playerInExcludedArea = false; }
+	protected void onStop() { setPlayerInExcludedArea(false); }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameStateChanged(GameStateChanged event) {
 		if (event.getGameState() == GameState.LOGGED_IN) checkArea();
-		else if (event.getGameState() == GameState.LOADING) playerInExcludedArea = false;
+		else if (event.getGameState() == GameState.LOADING) setPlayerInExcludedArea(false);
 	}
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) { checkArea(); }
 	private void checkArea() {
 		WorldPoint playerPoint = currentPlayerWorldPoint();
-		playerInExcludedArea = playerPoint != null && EXCLUDED_AREAS.stream().anyMatch(area -> area.contains(playerPoint));
+		setPlayerInExcludedArea(playerPoint != null && EXCLUDED_AREAS.stream().anyMatch(area -> area.contains(playerPoint)));
+	}
+	private void setPlayerInExcludedArea(boolean value) {
+		if (playerInExcludedArea == value) return;
+		playerInExcludedArea = value;
+		if (onTransition != null) onTransition.run();
 	}
 	private WorldPoint currentPlayerWorldPoint() {
 		if (client.getLocalPlayer() == null) return null;

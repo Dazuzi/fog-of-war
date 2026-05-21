@@ -43,22 +43,23 @@ public class WorldFogOverlay extends Overlay {
 	public void clearCaches() { actorCutouts.clearCaches(); }
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		actorCutouts.beginFrame();
-		try {
-			renderFrame(graphics);
-		} finally {
-			actorCutouts.endFrame();
-		}
-		return null;
-	}
-	private void renderFrame(Graphics2D graphics) {
-		if (clientState.isSuppressed(config, areaExclusionManager)) return;
+		if (clientState.isSuppressed(config, areaExclusionManager)) return null;
 		FogDisplayMode mode = config.worldDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
-		if (!showFog && !showBorder) return;
+		if (!showFog && !showBorder) return null;
 		RenderCenter rc = renderCenterProvider.get();
-		if (rc == null) return;
+		if (rc == null) return null;
+		boolean useCutouts = showFog && config.actorCutoutLimit().isEnabled();
+		if (useCutouts) actorCutouts.beginFrame();
+		try {
+			renderFrame(graphics, showFog, showBorder, rc);
+		} finally {
+			if (useCutouts) actorCutouts.endFrame();
+		}
+		return null;
+	}
+	private void renderFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc) {
 		WorldView worldView = rc.getWorldView();
 		int landRadius = config.landRenderDistance();
 		boolean sailing = rc.isOnWorldEntity();
@@ -85,7 +86,7 @@ public class WorldFogOverlay extends Overlay {
 			if (showFog) fogMask.renderFullFog(graphics, viewport);
 			return;
 		}
-		GeneralPath landBoundary = config.showWorldLandAreaWhileSailing() ? renderBoundary.createLandRenderAreaBoundary(worldView, center, plane, landRadius, viewport) : null;
+		GeneralPath landBoundary = config.showLandAreaWhileSailing() ? renderBoundary.createLandRenderAreaBoundary(worldView, center, plane, landRadius, viewport) : null;
 		if (showFog) {
 			fogMask.renderFog(graphics, viewport, worldView, seaBoundary, center, plane, seaRadius, actorCutouts);
 			if (landBoundary != null) fogMask.renderSailingSeaFog(graphics, viewport, worldView, seaBoundary, landBoundary, center, plane, landRadius, actorCutouts);

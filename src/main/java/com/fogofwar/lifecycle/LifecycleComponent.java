@@ -11,13 +11,11 @@ public abstract class LifecycleComponent {
 		onStart();
 	}
 	public final void stop() {
-		boolean wasStarted = started;
-		if (wasStarted) {
-			eventBus.unregister(this);
-			started = false;
-		}
-		onStop(wasStarted);
+		if (!started) return;
+		eventBus.unregister(this);
+		started = false;
+		onStop();
 	}
 	protected void onStart() {}
-	protected void onStop(boolean wasStarted) {}
+	protected void onStop() {}
 }

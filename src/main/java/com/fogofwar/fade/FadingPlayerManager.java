@@ -40,7 +40,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 		this.areaExclusionManager = areaExclusionManager;
 	}
 	@Override
-	protected void onStop(boolean wasStarted) { clearAllTracking(); }
+	protected void onStop() { clearAllTracking(); }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameStateChanged(GameStateChanged event) {
@@ -84,10 +84,11 @@ public class FadingPlayerManager extends LifecycleComponent {
 			if (fp.getTicksSinceDisappeared() > fadeDuration) return true;
 			WorldPoint markerLocation = fp.getMarkerLocation();
 			if (fp.getTicksSinceDisappeared() > 1 && markerLocation.distanceTo(localPlayerLocation) <= fp.getRenderDistance()) return true;
-			if (extrapolate) {
+			WorldPoint velocity = fp.getVelocity();
+			if (extrapolate && velocity != null) {
 				fp.setMarkerLocation(new WorldPoint(
-						markerLocation.getX() + fp.getVelocity().getX(),
-						markerLocation.getY() + fp.getVelocity().getY(),
+						markerLocation.getX() + velocity.getX(),
+						markerLocation.getY() + velocity.getY(),
 						markerLocation.getPlane()));
 			}
 			return false;
@@ -111,13 +112,18 @@ public class FadingPlayerManager extends LifecycleComponent {
 			TrackedPlayer lastTickPlayer = entry.getValue();
 			WorldPoint lastLocation = lastTickPlayer.getLocation();
 			if (lastLocation == null) continue;
-			TrackedPlayer twoTicksAgoPlayer = twoTicksAgoPlayerLocations.get(player);
-			WorldPoint twoTicksAgoLocation = twoTicksAgoPlayer != null ? twoTicksAgoPlayer.getLocation() : null;
-			WorldPoint velocity = predictor.getVelocity(lastLocation, twoTicksAgoLocation);
 			int renderDistance = lastTickPlayer.getRenderDistance();
-			boolean nearRenderLimit = (onlyAtLimit || extrapolate) && predictor.isNearRenderLimit(lastLocation, localPlayerLocation, velocity, renderDistance);
+			boolean needsVelocity = onlyAtLimit || extrapolate;
+			WorldPoint velocity = null;
+			boolean nearRenderLimit = false;
+			if (needsVelocity) {
+				TrackedPlayer twoTicksAgoPlayer = twoTicksAgoPlayerLocations.get(player);
+				WorldPoint twoTicksAgoLocation = twoTicksAgoPlayer != null ? twoTicksAgoPlayer.getLocation() : null;
+				velocity = predictor.getVelocity(lastLocation, twoTicksAgoLocation);
+				nearRenderLimit = predictor.isNearRenderLimit(lastLocation, localPlayerLocation, velocity, renderDistance);
+			}
 			if (onlyAtLimit && !nearRenderLimit) continue;
-			WorldPoint initialFadeLocation = predictor.getInitialFadeLocation(lastLocation, localPlayerLocation, velocity, extrapolate, renderDistance, nearRenderLimit);
+			WorldPoint initialFadeLocation = extrapolate ? predictor.getInitialFadeLocation(lastLocation, localPlayerLocation, velocity, true, renderDistance, nearRenderLimit) : lastLocation;
 			fadingPlayers.put(player, new FadingPlayer(player, velocity, initialFadeLocation, renderDistance));
 		}
 		Map<Player, TrackedPlayer> tmp = twoTicksAgoPlayerLocations;

@@ -25,10 +25,17 @@ public interface FogOfWarConfig extends Config {
 			position = 1
 	)
 	default boolean disableWhileSailing() { return false; }
+	@ConfigItem(
+			keyName = "showLandAreaWhileSailing",
+			name = "Show land area while Sailing",
+			description = "Show the smaller land actor render area while Sailing.",
+			position = 2
+	)
+	default boolean showLandAreaWhileSailing() { return false; }
 	@ConfigSection(
 			name = "World",
 			description = "Settings for the world overlay",
-			position = 2
+			position = 3
 	)
 	String worldSection = "worldSection";
 	@ConfigItem(
@@ -74,18 +81,10 @@ public interface FogOfWarConfig extends Config {
 			position = 4
 	)
 	default EntityExclusionLimit actorCutoutLimit() { return EntityExclusionLimit.LIMIT_64; }
-	@ConfigItem(
-			keyName = "showWorldLandAreaWhileSailing",
-			name = "Show land area while Sailing",
-			description = "Show the smaller land actor render area while Sailing.",
-			section = worldSection,
-			position = 5
-	)
-	default boolean showWorldLandAreaWhileSailing() { return false; }
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",
-			position = 3
+			position = 4
 	)
 	String minimapSection = "minimapSection";
 	@ConfigItem(
@@ -123,18 +122,10 @@ public interface FogOfWarConfig extends Config {
 			position = 3
 	)
 	default int minimapBorderThickness() { return 1; }
-	@ConfigItem(
-			keyName = "showMinimapLandAreaWhileSailing",
-			name = "Show land area while Sailing",
-			description = "Show the smaller land actor render area while Sailing.",
-			section = minimapSection,
-			position = 4
-	)
-	default boolean showMinimapLandAreaWhileSailing() { return false; }
 	@ConfigSection(
 			name = "Fading Players",
 			description = "Settings for marking players that leave render distance",
-			position = 4
+			position = 5
 	)
 	String fadingPlayerSection = "fadingPlayerSection";
 	@ConfigItem(
@@ -190,7 +181,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigSection(
 			name = "Tweaks",
 			description = "Advanced settings for experimental features.",
-			position = 5,
+			position = 6,
 			closedByDefault = true
 	)
 	String tweaksSection = "tweaksSection";

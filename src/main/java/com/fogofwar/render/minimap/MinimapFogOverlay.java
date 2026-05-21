@@ -79,7 +79,7 @@ public class MinimapFogOverlay extends Overlay {
 			if (showFog) fogMask.renderFullFog(graphics, minimapClipShape);
 			return;
 		}
-		GeneralPath landPath = config.showMinimapLandAreaWhileSailing() ? renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap.getBounds()) : null;
+		GeneralPath landPath = config.showLandAreaWhileSailing() ? renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap.getBounds()) : null;
 		if (showFog) {
 			fogMask.renderFog(graphics, minimapClipShape, seaPath);
 			if (landPath != null) fogMask.renderSailingSeaFog(graphics, seaPath, landPath);

@@ -26,8 +26,8 @@ public class VisibleActorTracker extends LifecycleComponent implements RenderCal
 	@Override
 	protected void onStart() { renderCallbackManager.register(this); }
 	@Override
-	protected void onStop(boolean wasStarted) {
-		if (wasStarted) renderCallbackManager.unregister(this);
+	protected void onStop() {
+		renderCallbackManager.unregister(this);
 		visibleActors.clear();
 	}
 	@Subscribe

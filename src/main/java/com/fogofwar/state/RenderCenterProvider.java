@@ -30,7 +30,7 @@ public class RenderCenterProvider extends LifecycleComponent {
 		resolved = false;
 	}
 	@Override
-	protected void onStop(boolean wasStarted) { clear(); }
+	protected void onStop() { clear(); }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onBeforeRender(BeforeRender event) { clear(); }
