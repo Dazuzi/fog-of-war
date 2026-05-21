@@ -11,7 +11,8 @@ public class ClientState {
 	@Inject
 	public ClientState(Client client) { this.client = client; }
 	public boolean isNotInWilderness() { return client.getVarbitValue(VarbitID.INSIDE_WILDERNESS) != 1; }
+	public boolean isSailing() { return WorldEntityCoords.isPlayerOnShip(client.getLocalPlayer(), client.getTopLevelWorldView()); }
 	public boolean isClientNotReady() { return client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null; }
-	private boolean isSuppressed(FogOfWarConfig config) { return isClientNotReady() || (config.onlyInWilderness() && isNotInWilderness()); }
+	private boolean isSuppressed(FogOfWarConfig config) { return isClientNotReady() || (config.onlyInWilderness() && isNotInWilderness()) || (config.disableWhileSailing() && isSailing()); }
 	public boolean isSuppressed(FogOfWarConfig config, AreaExclusionManager areaExclusionManager) { return areaExclusionManager.isPlayerInExcludedArea() || isSuppressed(config); }
 }

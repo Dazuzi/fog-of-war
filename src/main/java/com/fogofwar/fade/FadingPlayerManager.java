@@ -60,6 +60,10 @@ public class FadingPlayerManager extends LifecycleComponent {
 			clearAllTracking();
 			return;
 		}
+		if (config.disableWhileSailing() && isOnWorldEntity(localPlayer)) {
+			clearAllTracking();
+			return;
+		}
 		int fadeDuration = config.fadeDurationTicks();
 		boolean extrapolate = config.predictMovement();
 		boolean onlyAtLimit = config.onlyFadeAtRenderEdge();

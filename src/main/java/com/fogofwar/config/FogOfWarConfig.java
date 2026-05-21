@@ -18,6 +18,13 @@ public interface FogOfWarConfig extends Config {
 			position = 0
 	)
 	default boolean onlyInWilderness() { return false; }
+	@ConfigItem(
+			keyName = "disableWhileSailing",
+			name = "Disable while Sailing",
+			description = "Hide world, minimap, and fading overlays while Sailing.",
+			position = 1
+	)
+	default boolean disableWhileSailing() { return false; }
 	@ConfigSection(
 			name = "World",
 			description = "Settings for the world overlay",

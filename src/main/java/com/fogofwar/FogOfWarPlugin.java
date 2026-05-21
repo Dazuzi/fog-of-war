@@ -17,6 +17,7 @@ import com.fogofwar.state.ClientState;
 import com.fogofwar.state.RenderCenterProvider;
 import com.google.inject.Provides;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.config.ConfigManager;
@@ -97,6 +98,11 @@ public class FogOfWarPlugin extends Plugin {
 	public void onGameStateChanged(GameStateChanged event) { updateComponents(); }
 	@Subscribe
 	@SuppressWarnings("unused")
+	public void onGameTick(GameTick event) {
+		if (config.disableWhileSailing()) updateComponents();
+	}
+	@Subscribe
+	@SuppressWarnings("unused")
 	public void onVarbitChanged(VarbitChanged event) {
 		if (!config.onlyInWilderness() || event.getVarbitId() != VarbitID.INSIDE_WILDERNESS) return;
 		updateComponents();
@@ -120,7 +126,7 @@ public class FogOfWarPlugin extends Plugin {
 		boolean visibleActorTrackingActive = worldActive && worldMode.showsFog() && config.actorCutoutLimit().isEnabled();
 		return new ComponentState(worldActive, minimapActive, config.debugOverlayEnabled(), fadingWorldActive, fadingMinimapActive, fadingActive, overlayActive, visibleActorTrackingActive);
 	}
-	private boolean isCurrentAreaEnabled() { return !config.onlyInWilderness() || !clientState.isNotInWilderness(); }
+	private boolean isCurrentAreaEnabled() { return (!config.onlyInWilderness() || !clientState.isNotInWilderness()) && (!config.disableWhileSailing() || !clientState.isSailing()); }
 	private static final class ToggleSpec {
 		private final OverlayToggle toggle;
 		private final Predicate<ComponentState> activeFn;
