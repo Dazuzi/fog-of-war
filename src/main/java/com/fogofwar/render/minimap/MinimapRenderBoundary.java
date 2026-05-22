@@ -15,11 +15,11 @@ final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
 	private static final int MINIMAP_RENDER_AREA_PADDING = 1;
 	private final Client client;
 	private final List<Point> boundaryPoints = new ArrayList<>(128);
-	private final MinimapPathCache seaRenderAreaPath = new MinimapPathCache();
-	private final MinimapPathCache landRenderAreaPath = new MinimapPathCache();
+	private final PathCache seaRenderAreaPath = new PathCache();
+	private final PathCache landRenderAreaPath = new PathCache();
 	private Rectangle currentMinimapBounds;
 	private Point currentCenterPoint;
-	private MinimapPathCache currentCache;
+	private PathCache currentCache;
 	MinimapRenderBoundary(Client client) { this.client = client; }
 	void clearCaches() {
 		seaRenderAreaPath.clear();
@@ -31,7 +31,7 @@ final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
 	GeneralPath createLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
 		return buildRenderAreaPath(rc, radius, minimapBounds, landRenderAreaPath);
 	}
-	private GeneralPath buildRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
+	private GeneralPath buildRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds, PathCache cache) {
 		LocalPoint centerLp = rc.snappedCenter();
 		WorldPoint centerWp = rc.getSnappedWorldPoint();
 		if (centerWp == null) return null;
@@ -97,5 +97,23 @@ final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
 		}
 		path.closePath();
 		return path;
+	}
+	private static final class PathCache {
+		private GeneralPath working = new GeneralPath();
+		private GeneralPath lastValid = new GeneralPath();
+		private GeneralPath working() { return working; }
+		private GeneralPath lastValid() { return lastValid; }
+		private boolean hasLastValid() { return lastValid.getCurrentPoint() != null; }
+		private GeneralPath saveValid() {
+			GeneralPath valid = working;
+			working = lastValid;
+			lastValid = valid;
+			working.reset();
+			return lastValid;
+		}
+		private void clear() {
+			working.reset();
+			lastValid.reset();
+		}
 	}
 }

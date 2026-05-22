@@ -8,7 +8,6 @@ import com.fogofwar.fade.FadingPlayerManager;
 import com.fogofwar.fade.FadingPlayerMinimapOverlay;
 import com.fogofwar.fade.FadingPlayerOverlay;
 import com.fogofwar.lifecycle.LifecycleComponent;
-import com.fogofwar.lifecycle.OverlayToggle;
 import com.fogofwar.area.AreaExclusionManager;
 import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.render.minimap.MinimapFogOverlay;
@@ -26,6 +25,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
 import java.util.List;
@@ -86,11 +86,11 @@ public class FogOfWarPlugin extends Plugin {
 	}
 	private void initComponents() {
 		overlayToggles = List.of(
-				new ToggleSpec(new OverlayToggle(overlayManager, worldOverlay), state -> state.worldActive),
-				new ToggleSpec(new OverlayToggle(overlayManager, minimapOverlay), state -> state.minimapActive),
-				new ToggleSpec(new OverlayToggle(overlayManager, debugOverlay), state -> state.debugActive),
-				new ToggleSpec(new OverlayToggle(overlayManager, fadingPlayerOverlay), state -> state.fadingWorldActive),
-				new ToggleSpec(new OverlayToggle(overlayManager, fadingPlayerMinimapOverlay), state -> state.fadingMinimapActive));
+				new ToggleSpec(worldOverlay, state -> state.worldActive),
+				new ToggleSpec(minimapOverlay, state -> state.minimapActive),
+				new ToggleSpec(debugOverlay, state -> state.debugActive),
+				new ToggleSpec(fadingPlayerOverlay, state -> state.fadingWorldActive),
+				new ToggleSpec(fadingPlayerMinimapOverlay, state -> state.fadingMinimapActive));
 		lifecycleComponents = List.of(
 				new LifecycleSpec(areaExclusionManager, state -> state.anyConfigured),
 				new LifecycleSpec(renderCenterProvider, state -> state.overlayActive),
@@ -153,15 +153,22 @@ public class FogOfWarPlugin extends Plugin {
 		if (config.disableWhileSailing() && clientState.isSailing()) return false;
 		return !areaExclusionManager.isPlayerInExcludedArea();
 	}
-	private static final class ToggleSpec {
-		private final OverlayToggle toggle;
+	private final class ToggleSpec {
+		private final Overlay overlay;
 		private final Predicate<ComponentState> activeFn;
-		private ToggleSpec(OverlayToggle toggle, Predicate<ComponentState> activeFn) {
-			this.toggle = toggle;
+		private boolean enabled;
+		private ToggleSpec(Overlay overlay, Predicate<ComponentState> activeFn) {
+			this.overlay = overlay;
 			this.activeFn = activeFn;
 		}
-		private void update(ComponentState state) { toggle.set(activeFn.test(state)); }
-		private void disable() { toggle.set(false); }
+		private void update(ComponentState state) { set(activeFn.test(state)); }
+		private void disable() { set(false); }
+		private void set(boolean enabled) {
+			if (this.enabled == enabled) return;
+			if (enabled) overlayManager.add(overlay);
+			else overlayManager.remove(overlay);
+			this.enabled = enabled;
+		}
 	}
 	private static final class LifecycleSpec {
 		private final LifecycleComponent component;

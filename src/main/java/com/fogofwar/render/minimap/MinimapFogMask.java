@@ -1,9 +1,7 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.render.FogColour;
-import com.fogofwar.render.FogMaskRenderer;
-import com.fogofwar.render.FogPathBuilder;
-import com.fogofwar.render.StrokeCache;
+import com.fogofwar.render.FogRender;
+import com.fogofwar.render.FogRender.StrokeCache;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
@@ -17,7 +15,7 @@ final class MinimapFogMask {
 	void renderFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
 		Rectangle b = minimapClipShape.getBounds();
-		FogPathBuilder.fill(fogFillPath, b, 1, path);
+		FogRender.fill(fogFillPath, b, 1, path);
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogFillPath);
 	}
@@ -27,16 +25,16 @@ final class MinimapFogMask {
 	}
 	void renderBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		FogMaskRenderer.drawBorder(graphics, path, config.minimapBorderColour(), borderStroke, config.minimapBorderThickness());
+		FogRender.drawBorder(graphics, path, config.minimapBorderColour(), borderStroke, config.minimapBorderThickness());
 	}
 	void renderSailingSeaFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary) {
-		Area area = FogMaskRenderer.createDifferenceArea(boundary, innerBoundary);
+		Area area = FogRender.createDifferenceArea(boundary, innerBoundary);
 		if (area.isEmpty()) return;
-		graphics.setColor(FogColour.sailingSea(config.minimapFogColour()));
+		graphics.setColor(FogRender.sailingSea(config.minimapFogColour()));
 		graphics.fill(area);
 	}
 	void renderSailingSeaBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
-		FogMaskRenderer.drawBorder(graphics, path, FogColour.sailingSea(config.minimapBorderColour()), borderStroke, config.minimapBorderThickness());
+		FogRender.drawBorder(graphics, path, FogRender.sailingSea(config.minimapBorderColour()), borderStroke, config.minimapBorderThickness());
 	}
 }

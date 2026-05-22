@@ -15,7 +15,6 @@ import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.geom.GeneralPath;
 public class MinimapFogOverlay extends Overlay {
-	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final RenderCenterProvider renderCenterProvider;
@@ -24,7 +23,6 @@ public class MinimapFogOverlay extends Overlay {
 	private final MinimapFogMask fogMask;
 	@Inject
 	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderCenterProvider renderCenterProvider, MinimapClipProvider clipProvider) {
-		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
 		this.renderCenterProvider = renderCenterProvider;
@@ -46,7 +44,7 @@ public class MinimapFogOverlay extends Overlay {
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();
 		if (!showFog && !showBorder) return null;
-		Widget minimap = MinimapWidgetProvider.getMinimapWidget(client);
+		Widget minimap = clipProvider.getMinimapWidget();
 		if (minimap == null || minimap.isHidden()) return null;
 		RenderCenter rc = renderCenterProvider.get();
 		if (rc == null) return null;

@@ -1,7 +1,6 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.render.minimap.MinimapClipProvider;
-import com.fogofwar.render.minimap.MinimapWidgetProvider;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
@@ -28,7 +27,7 @@ public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 	boolean showsMarker() { return config.playerFadeMarkerMode().showsMinimap(); }
 	@Override
 	Dimension renderPlayers(Graphics2D graphics, WorldView wv, Collection<FadingPlayer> fadingPlayers) {
-		Widget minimapWidget = MinimapWidgetProvider.getMinimapWidget(client);
+		Widget minimapWidget = clipProvider.getMinimapWidget();
 		if (minimapWidget == null || minimapWidget.isHidden()) return null;
 		Shape oldClip = graphics.getClip();
 		graphics.setClip(clipProvider.getClipShape(minimapWidget));
