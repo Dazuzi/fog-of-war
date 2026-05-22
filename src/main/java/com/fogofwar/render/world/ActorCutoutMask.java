@@ -102,6 +102,8 @@ final class ActorCutoutMask {
 		boolean priority = actor == localPlayer;
 		WorldEntityCoords.ResolvedPoint location = WorldEntityCoords.resolveTopLevel(actor, worldView);
 		if (location == null || location.worldPoint.getPlane() != plane) return;
+		WorldView actorWv = actor.getWorldView();
+		boolean onSubWorld = actorWv != null && !actorWv.isTopLevel();
 		ActorHullCache.Entry cached = hullCache.get(actor);
 		hullCache.markSeen(actor);
 		int anim = actor.getAnimation(), frame = actor.getAnimationFrame();
@@ -129,7 +131,7 @@ final class ActorCutoutMask {
 			localY = lp.getY();
 			edgeDistance = getEdgeDistance(localX, localY, centerLp, localRadius);
 			int footprintRadius = Math.max(Perspective.LOCAL_TILE_SIZE, actor.getFootprintSize() * Perspective.LOCAL_TILE_SIZE / 2);
-			if (!priority && edgeDistance < -footprintRadius) return;
+			if (!priority && !onSubWorld && edgeDistance < -footprintRadius) return;
 			Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
 			if (!priority && (canvasPoint == null || !viewport.contains(canvasPoint.getX(), canvasPoint.getY()))) return;
 			canvasX = canvasPoint != null ? canvasPoint.getX() : viewport.x + viewport.width / 2;
