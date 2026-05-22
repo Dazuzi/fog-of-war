@@ -12,7 +12,6 @@ import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
 final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
-	private static final int MINIMAP_PROJECTION_DISTANCE = 32768;
 	private static final int MINIMAP_RENDER_AREA_PADDING = 1;
 	private final Client client;
 	private final List<Point> boundaryPoints = new ArrayList<>(128);
@@ -27,34 +26,29 @@ final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
 		landRenderAreaPath.clear();
 	}
 	GeneralPath createSeaRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
-		return buildRenderAreaPath(rc, rc.snappedCenter(), radius, minimapBounds, seaRenderAreaPath);
+		return buildRenderAreaPath(rc, radius, minimapBounds, seaRenderAreaPath);
 	}
 	GeneralPath createLandRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds) {
-		return buildRenderAreaPath(rc, rc.snappedCenter(), radius, minimapBounds, landRenderAreaPath);
+		return buildRenderAreaPath(rc, radius, minimapBounds, landRenderAreaPath);
 	}
-	private GeneralPath buildRenderAreaPath(RenderCenter rc, LocalPoint centerLp, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
-		WorldPoint centerWp = WorldPoint.fromLocal(rc.getWorldView(), centerLp.getX(), centerLp.getY(), rc.getWorldPoint().getPlane());
+	private GeneralPath buildRenderAreaPath(RenderCenter rc, int radius, Rectangle minimapBounds, MinimapPathCache cache) {
+		LocalPoint centerLp = rc.snappedCenter();
+		WorldPoint centerWp = rc.getSnappedWorldPoint();
+		if (centerWp == null) return null;
 		currentMinimapBounds = minimapBounds;
-		currentCenterPoint = Perspective.localToMinimap(client, centerLp, MINIMAP_PROJECTION_DISTANCE);
+		currentCenterPoint = rc.getMinimapCenterPoint();
 		currentCache = cache;
 		collectBoundaryPoints(rc.getWorldView(), centerWp, centerLp, radius);
 		double arcRadius = Math.max(minimapBounds.width, minimapBounds.height) / 2.0 + 1;
-		GeneralPath path = BoundaryPathBuilder.build(cache.path, boundaryPoints, minimapBounds.getCenterX(), minimapBounds.getCenterY(), arcRadius, this);
-		return path != cache.lastPath && isValid(path) ? saveValidPath(path, cache) : path;
+		GeneralPath path = BoundaryPathBuilder.build(cache.working(), boundaryPoints, minimapBounds.getCenterX(), minimapBounds.getCenterY(), arcRadius, this);
+		return path == cache.working() && isValid(path) ? cache.saveValid() : path;
 	}
 	@Override
 	public GeneralPath coverage(GeneralPath path) { return fullMinimapCoveragePath(path); }
 	@Override
 	public boolean isValid(GeneralPath path) { return path == null || currentCenterPoint == null || path.contains(currentCenterPoint.getX(), currentCenterPoint.getY()); }
 	@Override
-	public GeneralPath fallback(GeneralPath path) { return currentCache.hasLastPath() ? currentCache.lastPath : path; }
-	private GeneralPath saveValidPath(GeneralPath path, MinimapPathCache cache) {
-		if (path != null) {
-			cache.lastPath.reset();
-			cache.lastPath.append(path, false);
-		}
-		return path;
-	}
+	public GeneralPath fallback(GeneralPath path) { return currentCache.hasLastValid() ? currentCache.lastValid() : path; }
 	private Point padRenderAreaPoint(Point point) {
 		double cx = currentCenterPoint != null ? currentCenterPoint.getX() : currentMinimapBounds.getCenterX();
 		double cy = currentCenterPoint != null ? currentCenterPoint.getY() : currentMinimapBounds.getCenterY();
@@ -84,7 +78,7 @@ final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
 		}
 		int x = centerLp.getX() + tileXOffset * Perspective.LOCAL_TILE_SIZE + xOffset;
 		int y = centerLp.getY() + tileYOffset * Perspective.LOCAL_TILE_SIZE + yOffset;
-		Point projected = Perspective.localToMinimap(client, new LocalPoint(x, y, worldView), MINIMAP_PROJECTION_DISTANCE);
+		Point projected = Perspective.localToMinimap(client, new LocalPoint(x, y, worldView), RenderCenter.MINIMAP_PROJECTION_DISTANCE);
 		boundaryPoints.add(projected == null ? null : padRenderAreaPoint(projected));
 	}
 	private GeneralPath fullMinimapCoveragePath(GeneralPath path) {

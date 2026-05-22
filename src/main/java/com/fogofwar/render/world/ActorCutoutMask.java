@@ -115,32 +115,32 @@ final class ActorCutoutMask {
 		if (hit) {
 			if (!viewport.intersects(cached.bounds)) return;
 			if (!priority && boundary.contains(cached.bounds)) return;
-			addCachedExclusionCandidate(actor, cached, location.worldPoint, anim, frame, pose, poseFrame, ranked, bucketColumns, centerLp, localRadius);
-			return;
 		}
-		LocalPoint lp = location.localPoint;
-		int localX = lp.getX(), localY = lp.getY();
-		int edgeDistance = getEdgeDistance(localX, localY, centerLp, localRadius);
-		int footprintRadius = Math.max(Perspective.LOCAL_TILE_SIZE, actor.getFootprintSize() * Perspective.LOCAL_TILE_SIZE / 2);
-		if (!priority && edgeDistance < -footprintRadius) return;
-		Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
-		if (!priority && (canvasPoint == null || !viewport.contains(canvasPoint.getX(), canvasPoint.getY()))) return;
-		int canvasX = canvasPoint != null ? canvasPoint.getX() : viewport.x + viewport.width / 2;
-		int canvasY = canvasPoint != null ? canvasPoint.getY() : viewport.y + viewport.height / 2;
+		int localX, localY, canvasX, canvasY, edgeDistance;
+		if (hit) {
+			localX = cached.localX;
+			localY = cached.localY;
+			canvasX = cached.canvasX;
+			canvasY = cached.canvasY;
+			edgeDistance = getEdgeDistance(localX, localY, centerLp, localRadius);
+		} else {
+			LocalPoint lp = location.localPoint;
+			localX = lp.getX();
+			localY = lp.getY();
+			edgeDistance = getEdgeDistance(localX, localY, centerLp, localRadius);
+			int footprintRadius = Math.max(Perspective.LOCAL_TILE_SIZE, actor.getFootprintSize() * Perspective.LOCAL_TILE_SIZE / 2);
+			if (!priority && edgeDistance < -footprintRadius) return;
+			Point canvasPoint = Perspective.localToCanvas(client, lp, plane);
+			if (!priority && (canvasPoint == null || !viewport.contains(canvasPoint.getX(), canvasPoint.getY()))) return;
+			canvasX = canvasPoint != null ? canvasPoint.getX() : viewport.x + viewport.width / 2;
+			canvasY = canvasPoint != null ? canvasPoint.getY() : viewport.y + viewport.height / 2;
+		}
 		int bucket = -1, score = 0;
 		if (ranked) {
 			if (viewport.contains(canvasX, canvasY)) bucket = getExclusionBucket(canvasX, canvasY, bucketColumns);
-			score = getCandidateScore(actor, false, edgeDistance);
+			score = getCandidateScore(actor, hit, edgeDistance);
 		}
-		addExclusionCandidate(actor, cached, location.worldPoint, anim, frame, pose, poseFrame, false, score, bucket, canvasX, canvasY, localX, localY);
-	}
-	private void addCachedExclusionCandidate(Actor actor, ActorHullCache.Entry cached, WorldPoint awp, int anim, int frame, int pose, int poseFrame, boolean ranked, int bucketColumns, LocalPoint centerLp, int localRadius) {
-		int bucket = -1, score = 0;
-		if (ranked) {
-			if (viewport.contains(cached.canvasX, cached.canvasY)) bucket = getExclusionBucket(cached.canvasX, cached.canvasY, bucketColumns);
-			score = getCandidateScore(actor, true, getEdgeDistance(cached.localX, cached.localY, centerLp, localRadius));
-		}
-		addExclusionCandidate(actor, cached, awp, anim, frame, pose, poseFrame, true, score, bucket, cached.canvasX, cached.canvasY, cached.localX, cached.localY);
+		addExclusionCandidate(actor, cached, location.worldPoint, anim, frame, pose, poseFrame, hit, score, bucket, canvasX, canvasY, localX, localY);
 	}
 	private int getEdgeDistance(int localX, int localY, LocalPoint centerLp, int localRadius) {
 		int dx = Math.abs(localX - centerLp.getX());
