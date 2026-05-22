@@ -1,4 +1,4 @@
-package com.fogofwar.state;
+package com.fogofwar.coord;
 import net.runelite.api.Actor;
 import net.runelite.api.Player;
 import net.runelite.api.WorldEntity;

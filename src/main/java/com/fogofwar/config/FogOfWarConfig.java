@@ -1,7 +1,7 @@
 package com.fogofwar.config;
 import net.runelite.client.config.*;
 import java.awt.*;
-@ConfigGroup("fogofwar")
+@ConfigGroup(FogOfWarConfigMigration.CONFIG_GROUP)
 public interface FogOfWarConfig extends Config {
 	@ConfigItem(
 			keyName = "settingsVersion",
@@ -80,7 +80,7 @@ public interface FogOfWarConfig extends Config {
 			section = worldSection,
 			position = 4
 	)
-	default EntityExclusionLimit actorCutoutLimit() { return EntityExclusionLimit.LIMIT_64; }
+	default ActorCutoutLimit actorCutoutLimit() { return ActorCutoutLimit.LIMIT_64; }
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",

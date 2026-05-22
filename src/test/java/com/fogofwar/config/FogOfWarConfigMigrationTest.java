@@ -18,8 +18,8 @@ public class FogOfWarConfigMigrationTest {
 		assertEquals(FadingPlayerMode.OFF, FogOfWarConfigMigration.toFadingPlayerMode(true, false, false));
 	}
 	@Test
-	public void toEntityExclusionLimitKeepsOldToggleSemantics() {
-		assertEquals(EntityExclusionLimit.LIMIT_64, FogOfWarConfigMigration.toEntityExclusionLimit(true));
-		assertEquals(EntityExclusionLimit.NONE, FogOfWarConfigMigration.toEntityExclusionLimit(false));
+	public void toActorCutoutLimitKeepsOldToggleSemantics() {
+		assertEquals(ActorCutoutLimit.LIMIT_64, FogOfWarConfigMigration.toActorCutoutLimit(true));
+		assertEquals(ActorCutoutLimit.NONE, FogOfWarConfigMigration.toActorCutoutLimit(false));
 	}
 }

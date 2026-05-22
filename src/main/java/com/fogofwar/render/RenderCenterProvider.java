@@ -1,4 +1,4 @@
-package com.fogofwar.state;
+package com.fogofwar.render;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;

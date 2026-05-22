@@ -1,6 +1,5 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
@@ -17,20 +16,18 @@ abstract class AbstractFadingPlayerOverlay extends Overlay {
 	protected final FogOfWarConfig config;
 	private final FadingPlayerManager manager;
 	private final ClientState clientState;
-	private final AreaExclusionManager areaExclusionManager;
-	AbstractFadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState, AreaExclusionManager areaExclusionManager, OverlayLayer layer) {
+	AbstractFadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState, OverlayLayer layer) {
 		this.client = client;
 		this.config = config;
 		this.manager = manager;
 		this.clientState = clientState;
-		this.areaExclusionManager = areaExclusionManager;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_HIGH);
 		setLayer(layer);
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!showsMarker() || clientState.isSuppressed(config, areaExclusionManager)) return null;
+		if (!showsMarker() || clientState.isClientNotReady()) return null;
 		Collection<FadingPlayer> fadingPlayers = manager.getFadingPlayers().values();
 		if (fadingPlayers.isEmpty()) return null;
 		WorldView wv = client.getTopLevelWorldView();

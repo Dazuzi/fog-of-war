@@ -1,10 +1,9 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogDisplayMode;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.state.AreaExclusionManager;
+import com.fogofwar.render.RenderCenter;
+import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
-import com.fogofwar.state.RenderCenter;
-import com.fogofwar.state.RenderCenterProvider;
 import net.runelite.api.Client;
 import net.runelite.api.widgets.Widget;
 import net.runelite.client.ui.overlay.Overlay;
@@ -19,17 +18,15 @@ public class MinimapFogOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final AreaExclusionManager areaExclusionManager;
 	private final RenderCenterProvider renderCenterProvider;
 	private final MinimapClipProvider clipProvider;
 	private final MinimapRenderBoundary renderBoundary;
 	private final MinimapFogMask fogMask;
 	@Inject
-	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, RenderCenterProvider renderCenterProvider, MinimapClipProvider clipProvider) {
+	public MinimapFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderCenterProvider renderCenterProvider, MinimapClipProvider clipProvider) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
-		this.areaExclusionManager = areaExclusionManager;
 		this.renderCenterProvider = renderCenterProvider;
 		this.clipProvider = clipProvider;
 		this.renderBoundary = new MinimapRenderBoundary(client);
@@ -44,7 +41,7 @@ public class MinimapFogOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (clientState.isSuppressed(config, areaExclusionManager)) return null;
+		if (clientState.isClientNotReady()) return null;
 		FogDisplayMode mode = config.minimapDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();

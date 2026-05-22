@@ -1,5 +1,5 @@
 package com.fogofwar.render.world;
-import com.fogofwar.state.WorldEntityCoords;
+import com.fogofwar.coord.WorldEntityCoords;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
@@ -17,9 +17,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 final class ActorCutoutMask {
-	private static final int ENTITY_EXCLUSION_BUCKET_SIZE = 48;
+	private static final int ACTOR_CUTOUT_BUCKET_SIZE = 48;
 	private static final int PRIORITY_SCORE = Integer.MIN_VALUE / 2;
-	private static final Comparator<ActorCutoutCandidate> EXCLUSION_CANDIDATE_ORDER = (a, b) -> {
+	private static final Comparator<ActorCutoutCandidate> ACTOR_CUTOUT_CANDIDATE_ORDER = (a, b) -> {
 		int c = Integer.compare(a.score, b.score);
 		if (c != 0) return c;
 		c = Boolean.compare(!a.hit, !b.hit);
@@ -60,13 +60,13 @@ final class ActorCutoutMask {
 		this.localPlayer = client.getLocalPlayer();
 		retainHullCache = true;
 		boolean all = limit == Integer.MAX_VALUE;
-		int bucketColumns = all ? 1 : Math.max(1, (viewport.width + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
+		int bucketColumns = all ? 1 : Math.max(1, (viewport.width + ACTOR_CUTOUT_BUCKET_SIZE - 1) / ACTOR_CUTOUT_BUCKET_SIZE);
 		try {
 			collectExclusionCandidates(worldView, boundary, centerLp, plane, radius, !all, bucketColumns);
 			if (exclusionCandidateCount == 0) return;
 			if (all) subtractAllExclusionAreas(fogArea, boundary);
 			else {
-				exclusionCandidates.subList(0, exclusionCandidateCount).sort(EXCLUSION_CANDIDATE_ORDER);
+				exclusionCandidates.subList(0, exclusionCandidateCount).sort(ACTOR_CUTOUT_CANDIDATE_ORDER);
 				subtractSelectedExclusionAreas(fogArea, boundary, limit, bucketColumns);
 			}
 		} finally {
@@ -156,8 +156,8 @@ final class ActorCutoutMask {
 		return score;
 	}
 	private int getExclusionBucket(int canvasX, int canvasY, int bucketColumns) {
-		int x = (canvasX - viewport.x) / ENTITY_EXCLUSION_BUCKET_SIZE;
-		int y = (canvasY - viewport.y) / ENTITY_EXCLUSION_BUCKET_SIZE;
+		int x = (canvasX - viewport.x) / ACTOR_CUTOUT_BUCKET_SIZE;
+		int y = (canvasY - viewport.y) / ACTOR_CUTOUT_BUCKET_SIZE;
 		return y * bucketColumns + x;
 	}
 	private void addExclusionCandidate(Actor actor, ActorHullCache.Entry cached, WorldPoint awp, int anim, int frame, int pose, int poseFrame, boolean hit, int score, int bucket, int canvasX, int canvasY, int localX, int localY) {
@@ -165,7 +165,7 @@ final class ActorCutoutMask {
 		exclusionCandidates.get(exclusionCandidateCount++).set(actor, cached, awp, anim, frame, pose, poseFrame, hit, score, bucket, canvasX, canvasY, localX, localY);
 	}
 	private void subtractSelectedExclusionAreas(Area fogArea, GeneralPath boundary, int limit, int bucketColumns) {
-		int bucketRows = Math.max(1, (viewport.height + ENTITY_EXCLUSION_BUCKET_SIZE - 1) / ENTITY_EXCLUSION_BUCKET_SIZE);
+		int bucketRows = Math.max(1, (viewport.height + ACTOR_CUTOUT_BUCKET_SIZE - 1) / ACTOR_CUTOUT_BUCKET_SIZE);
 		int bucketCount = bucketColumns * bucketRows;
 		if (usedBuckets.length < bucketCount) usedBuckets = new boolean[bucketCount];
 		else Arrays.fill(usedBuckets, 0, bucketCount, false);

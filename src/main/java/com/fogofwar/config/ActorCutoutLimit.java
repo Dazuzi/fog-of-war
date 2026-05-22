@@ -1,6 +1,6 @@
 package com.fogofwar.config;
 import lombok.Getter;
-public enum EntityExclusionLimit {
+public enum ActorCutoutLimit {
 	NONE("None", 0),
 	LIMIT_16("16", 16),
 	LIMIT_32("32", 32),
@@ -14,7 +14,7 @@ public enum EntityExclusionLimit {
 	private final String name;
 	@Getter
 	private final int limit;
-	EntityExclusionLimit(String name, int limit) {
+	ActorCutoutLimit(String name, int limit) {
 		this.name = name;
 		this.limit = limit;
 	}

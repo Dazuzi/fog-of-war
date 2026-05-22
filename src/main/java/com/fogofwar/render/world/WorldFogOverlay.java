@@ -1,10 +1,9 @@
 package com.fogofwar.render.world;
 import com.fogofwar.config.FogDisplayMode;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.state.AreaExclusionManager;
+import com.fogofwar.render.RenderCenter;
+import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
-import com.fogofwar.state.RenderCenter;
-import com.fogofwar.state.RenderCenterProvider;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
@@ -20,18 +19,16 @@ public class WorldFogOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
-	private final AreaExclusionManager areaExclusionManager;
 	private final RenderCenterProvider renderCenterProvider;
 	private final Rectangle viewport = new Rectangle();
 	private final WorldRenderBoundary renderBoundary;
 	private final WorldFogMask fogMask;
 	private final ActorCutoutMask actorCutouts;
 	@Inject
-	public WorldFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, AreaExclusionManager areaExclusionManager, RenderCenterProvider renderCenterProvider, VisibleActorTracker visibleActorTracker) {
+	public WorldFogOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderCenterProvider renderCenterProvider, VisibleActorTracker visibleActorTracker) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
-		this.areaExclusionManager = areaExclusionManager;
 		this.renderCenterProvider = renderCenterProvider;
 		this.renderBoundary = new WorldRenderBoundary(client);
 		this.fogMask = new WorldFogMask(config);
@@ -43,7 +40,7 @@ public class WorldFogOverlay extends Overlay {
 	public void clearCaches() { actorCutouts.clearCaches(); }
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (clientState.isSuppressed(config, areaExclusionManager)) return null;
+		if (clientState.isClientNotReady()) return null;
 		FogDisplayMode mode = config.worldDisplayMode();
 		boolean showFog = mode.showsFog();
 		boolean showBorder = mode.showsBorder();

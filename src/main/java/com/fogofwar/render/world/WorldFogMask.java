@@ -1,5 +1,5 @@
 package com.fogofwar.render.world;
-import com.fogofwar.config.EntityExclusionLimit;
+import com.fogofwar.config.ActorCutoutLimit;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.render.FogColour;
 import com.fogofwar.render.FogMaskRenderer;
@@ -20,13 +20,13 @@ final class WorldFogMask {
 		if (boundary.contains(viewport)) return;
 		FogPathBuilder.fill(fogPath, viewport, 0, boundary);
 		graphics.setColor(config.worldFogColour());
-		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
-		if (!exclusionLimit.isEnabled()) {
+		ActorCutoutLimit cutoutLimit = config.actorCutoutLimit();
+		if (!cutoutLimit.isEnabled()) {
 			graphics.fill(fogPath);
 			return;
 		}
 		Area fogArea = new Area(fogPath);
-		actorCutouts.subtractExclusions(fogArea, viewport, worldView, boundary, centerLp, plane, radius, exclusionLimit.getLimit());
+		actorCutouts.subtractExclusions(fogArea, viewport, worldView, boundary, centerLp, plane, radius, cutoutLimit.getLimit());
 		graphics.fill(fogArea);
 	}
 	void renderFullFog(Graphics2D graphics, Rectangle viewport) {
@@ -39,8 +39,8 @@ final class WorldFogMask {
 	void renderSailingSeaFog(Graphics2D graphics, Rectangle viewport, WorldView worldView, GeneralPath boundary, GeneralPath innerBoundary, LocalPoint centerLp, int plane, int radius, ActorCutoutMask actorCutouts) {
 		Area area = FogMaskRenderer.createDifferenceArea(boundary, innerBoundary);
 		if (area.isEmpty()) return;
-		EntityExclusionLimit exclusionLimit = config.actorCutoutLimit();
-		if (exclusionLimit.isEnabled()) actorCutouts.subtractExclusions(area, viewport, worldView, innerBoundary, centerLp, plane, radius, exclusionLimit.getLimit());
+		ActorCutoutLimit cutoutLimit = config.actorCutoutLimit();
+		if (cutoutLimit.isEnabled()) actorCutouts.subtractExclusions(area, viewport, worldView, innerBoundary, centerLp, plane, radius, cutoutLimit.getLimit());
 		if (area.isEmpty()) return;
 		graphics.setColor(FogColour.sailingSea(config.worldFogColour()));
 		graphics.fill(area);

@@ -14,7 +14,8 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'com.fogofwar.FogOfWar'
+def pluginMainClass = 'com.fogofwar.FogOfWarPlugin'
+def runMainClass = 'com.fogofwar.FogOfWar'
 
 dependencies {
     compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
@@ -35,7 +36,7 @@ tasks.withType(JavaCompile).configureEach {
 }
 tasks.register('run', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
-    mainClass = pluginMainClass
+    mainClass = runMainClass
     jvmArgs "-ea"
     args "--developer-mode", "--debug"
 }

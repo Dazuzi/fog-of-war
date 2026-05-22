@@ -1,4 +1,5 @@
-package com.fogofwar.state;
+package com.fogofwar.render;
+import com.fogofwar.coord.WorldEntityCoords;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;

@@ -1,6 +1,5 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
@@ -15,8 +14,8 @@ import java.awt.Graphics2D;
 import java.awt.Polygon;
 public class FadingPlayerOverlay extends AbstractFadingPlayerOverlay {
 	@Inject
-	protected FadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState, AreaExclusionManager areaExclusionManager) {
-		super(client, config, manager, clientState, areaExclusionManager, OverlayLayer.ABOVE_SCENE);
+	protected FadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState) {
+		super(client, config, manager, clientState, OverlayLayer.ABOVE_SCENE);
 	}
 	@Override
 	boolean showsMarker() { return config.playerFadeMarkerMode().showsWorld(); }

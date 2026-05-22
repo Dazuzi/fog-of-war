@@ -1,7 +1,7 @@
 package com.fogofwar.debug;
 import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.coord.WorldEntityCoords;
 import com.fogofwar.state.ClientState;
-import com.fogofwar.state.WorldEntityCoords;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.WorldEntity;

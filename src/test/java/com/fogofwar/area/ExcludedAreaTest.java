@@ -1,4 +1,4 @@
-package com.fogofwar.state;
+package com.fogofwar.area;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Test;
 import static org.junit.Assert.assertFalse;

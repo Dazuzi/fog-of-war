@@ -67,7 +67,7 @@ public final class FogOfWarConfigMigration {
 		}
 		if (oldConfig) {
 			for (String[] pair : DIRECT_KEYS) copy(configManager, pair[0], pair[1]);
-			migrateEntityExclusionLimit(configManager);
+			migrateActorCutoutLimit(configManager);
 			migrateFogDisplayMode(configManager, "showWorldFog", "showWorldBorder", "worldDisplayMode");
 			migrateFogDisplayMode(configManager, "showMinimapFog", "showMinimapBorder", "minimapDisplayMode");
 			migrateFadingPlayerMode(configManager);
@@ -106,15 +106,15 @@ public final class FogOfWarConfigMigration {
 		if (minimap) return FadingPlayerMode.MINIMAP;
 		return FadingPlayerMode.OFF;
 	}
-	static EntityExclusionLimit toEntityExclusionLimit(boolean enabled) { return enabled ? EntityExclusionLimit.LIMIT_64 : EntityExclusionLimit.NONE; }
+	static ActorCutoutLimit toActorCutoutLimit(boolean enabled) { return enabled ? ActorCutoutLimit.LIMIT_64 : ActorCutoutLimit.NONE; }
 	private static void copy(ConfigManager configManager, String oldKey, String newKey) {
 		String value = configManager.getConfiguration(OLD_CONFIG_GROUP, oldKey);
 		if (value != null && configManager.getConfiguration(CONFIG_GROUP, newKey) == null) configManager.setConfiguration(CONFIG_GROUP, newKey, value);
 	}
-	private static void migrateEntityExclusionLimit(ConfigManager configManager) {
+	private static void migrateActorCutoutLimit(ConfigManager configManager) {
 		if (configManager.getConfiguration(CONFIG_GROUP, "actorCutoutLimit") != null) return;
 		Boolean value = configManager.getConfiguration(OLD_CONFIG_GROUP, "excludeEntities", boolean.class);
-		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "actorCutoutLimit", toEntityExclusionLimit(value));
+		if (value != null) configManager.setConfiguration(CONFIG_GROUP, "actorCutoutLimit", toActorCutoutLimit(value));
 	}
 	private static void migrateFogDisplayMode(ConfigManager configManager, String fogKey, String borderKey, String newKey) {
 		if (configManager.getConfiguration(OLD_CONFIG_GROUP, fogKey) == null && configManager.getConfiguration(OLD_CONFIG_GROUP, borderKey) == null) return;

@@ -2,7 +2,6 @@ package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.render.minimap.MinimapClipProvider;
 import com.fogofwar.render.minimap.MinimapWidgetProvider;
-import com.fogofwar.state.AreaExclusionManager;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
@@ -21,8 +20,8 @@ public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 	private static final int DOT_SIZE = 4;
 	private final MinimapClipProvider clipProvider;
 	@Inject
-	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, AreaExclusionManager areaExclusionManager, MinimapClipProvider clipProvider) {
-		super(client, config, manager, clientState, areaExclusionManager, OverlayLayer.ABOVE_WIDGETS);
+	protected FadingPlayerMinimapOverlay(Client client, FogOfWarConfig config, ClientState clientState, FadingPlayerManager manager, MinimapClipProvider clipProvider) {
+		super(client, config, manager, clientState, OverlayLayer.ABOVE_WIDGETS);
 		this.clipProvider = clipProvider;
 	}
 	@Override

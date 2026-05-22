@@ -1,4 +1,4 @@
-package com.fogofwar.state;
+package com.fogofwar.area;
 import net.runelite.api.coords.WorldPoint;
 public final class ExcludedArea {
 	private final int minX;

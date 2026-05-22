@@ -1,5 +1,5 @@
 package com.fogofwar.state;
-import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.coord.WorldEntityCoords;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.gameval.VarbitID;
@@ -13,6 +13,4 @@ public class ClientState {
 	public boolean isNotInWilderness() { return client.getVarbitValue(VarbitID.INSIDE_WILDERNESS) != 1; }
 	public boolean isSailing() { return WorldEntityCoords.isPlayerOnShip(client.getLocalPlayer(), client.getTopLevelWorldView()); }
 	public boolean isClientNotReady() { return client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null; }
-	private boolean isSuppressed(FogOfWarConfig config) { return isClientNotReady() || (config.onlyInWilderness() && isNotInWilderness()) || (config.disableWhileSailing() && isSailing()); }
-	public boolean isSuppressed(FogOfWarConfig config, AreaExclusionManager areaExclusionManager) { return areaExclusionManager.isPlayerInExcludedArea() || isSuppressed(config); }
 }

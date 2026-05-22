@@ -1,6 +1,6 @@
 package com.fogofwar.render.world;
 import com.fogofwar.render.BoundaryPathBuilder;
-import com.fogofwar.state.RenderCenter;
+import com.fogofwar.render.RenderCenter;
 import net.runelite.api.Client;
 import net.runelite.api.Perspective;
 import net.runelite.api.Point;

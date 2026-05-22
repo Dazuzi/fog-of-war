@@ -1,7 +1,7 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.state.AreaExclusionManager;
-import com.fogofwar.state.WorldEntityCoords;
+import com.fogofwar.area.AreaExclusionManager;
+import com.fogofwar.coord.WorldEntityCoords;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import lombok.Getter;
 import net.runelite.api.Client;
