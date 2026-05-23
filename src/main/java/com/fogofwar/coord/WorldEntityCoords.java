@@ -30,12 +30,8 @@ public final class WorldEntityCoords {
 		WorldEntityConfig config = worldEntity != null ? worldEntity.getConfig() : null;
 		return config != null && config.getCategory() == SHIP_ENTITY_CATEGORY;
 	}
-	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView topWorldView) { return resolveTopLevel(actor, null, topWorldView); }
-	public static WorldPoint playerToTopLevel(Player player, WorldView sourceWorldView, WorldView topWorldView) {
-		ResolvedPoint point = resolveTopLevel(player, sourceWorldView, topWorldView);
-		return point != null ? point.worldPoint : null;
-	}
-	private static ResolvedPoint resolveTopLevel(Actor actor, WorldView sourceWorldView, WorldView topWorldView) {
+	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView topWorldView) { return resolveTopLevel(actor, null, topWorldView, null); }
+	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView sourceWorldView, WorldView topWorldView, WorldEntity worldEntity) {
 		if (actor == null || topWorldView == null) return null;
 		if (sourceWorldView == null) sourceWorldView = actor.getWorldView();
 		if (sourceWorldView == null) return null;
@@ -46,13 +42,17 @@ public final class WorldEntityCoords {
 			if (localPoint == null) localPoint = LocalPoint.fromWorld(topWorldView, worldPoint);
 			return localPoint != null ? new ResolvedPoint(worldPoint, localPoint) : null;
 		}
-		WorldEntity worldEntity = getWorldEntity(sourceWorldView, topWorldView);
+		if (worldEntity == null) worldEntity = getWorldEntity(sourceWorldView, topWorldView);
 		if (worldEntity == null) return null;
 		if (localPoint == null && worldPoint != null) localPoint = LocalPoint.fromWorld(sourceWorldView, worldPoint);
 		if (localPoint == null) return null;
 		LocalPoint topLocalPoint = worldEntity.transformToMainWorld(localPoint);
 		WorldPoint topWorldPoint = toTopLevelWorldPoint(topWorldView, topLocalPoint);
 		return topWorldPoint != null ? new ResolvedPoint(topWorldPoint, topLocalPoint) : null;
+	}
+	public static WorldPoint playerToTopLevel(Player player, WorldView sourceWorldView, WorldView topWorldView) {
+		ResolvedPoint point = resolveTopLevel(player, sourceWorldView, topWorldView, null);
+		return point != null ? point.worldPoint : null;
 	}
 	public static final class ResolvedPoint {
 		public final WorldPoint worldPoint;

@@ -46,7 +46,7 @@ final class MinimapRenderBoundary implements BoundaryPathBuilder.Strategy {
 	@Override
 	public GeneralPath coverage(GeneralPath path) { return fullMinimapCoveragePath(path); }
 	@Override
-	public boolean isValid(GeneralPath path) { return path == null || currentCenterPoint == null || path.contains(currentCenterPoint.getX(), currentCenterPoint.getY()); }
+	public boolean isValid(GeneralPath path) { return currentCenterPoint == null || path.contains(currentCenterPoint.getX(), currentCenterPoint.getY()); }
 	@Override
 	public GeneralPath fallback(GeneralPath path) { return currentCache.hasLastValid() ? currentCache.lastValid() : path; }
 	private Point padRenderAreaPoint(Point point) {

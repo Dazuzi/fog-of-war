@@ -60,7 +60,8 @@ public class FadingPlayerManager extends LifecycleComponent {
 			clearAllTracking();
 			return;
 		}
-		if (config.disableWhileSailing() && isOnWorldEntity(localPlayer)) {
+		boolean onWorldEntity = isOnWorldEntity(localPlayer);
+		if (config.disableWhileSailing() && onWorldEntity) {
 			clearAllTracking();
 			return;
 		}
@@ -68,7 +69,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 		boolean extrapolate = config.predictMovement();
 		boolean onlyAtLimit = config.onlyFadeAtRenderEdge();
 		handleFadingPlayers(fadeDuration, extrapolate, localPlayerLocation);
-		updatePlayerTracking(extrapolate, onlyAtLimit, localPlayer, worldView, localPlayerLocation);
+		updatePlayerTracking(extrapolate, onlyAtLimit, localPlayer, worldView, localPlayerLocation, onWorldEntity);
 	}
 	private void clearAllTracking() {
 		fadingPlayers.clear();
@@ -94,11 +95,11 @@ public class FadingPlayerManager extends LifecycleComponent {
 			return false;
 		});
 	}
-	private void updatePlayerTracking(boolean extrapolate, boolean onlyAtLimit, Player localPlayer, WorldView worldView, WorldPoint localPlayerLocation) {
+	private void updatePlayerTracking(boolean extrapolate, boolean onlyAtLimit, Player localPlayer, WorldView worldView, WorldPoint localPlayerLocation, boolean onWorldEntity) {
 		currentPlayerLocations.clear();
 		currentPlayerNames.clear();
 		trackPlayers(localPlayer, worldView, worldView, config.landRenderDistance());
-		int boatRenderDistance = isOnWorldEntity(localPlayer) ? config.sailingRenderDistance() : config.landRenderDistance();
+		int boatRenderDistance = onWorldEntity ? config.sailingRenderDistance() : config.landRenderDistance();
 		for (WorldEntity worldEntity : worldView.worldEntities()) {
 			if (worldEntity == null) continue;
 			WorldView entityWorldView = worldEntity.getWorldView();

@@ -48,7 +48,7 @@ public final class RenderCenter {
 		WorldEntity we = WorldEntityCoords.getPlayerWorldEntity(p, topWv);
 		if (we == null) return null;
 		if (!WorldEntityCoords.isShip(we)) {
-			WorldEntityCoords.ResolvedPoint point = WorldEntityCoords.resolveTopLevel(p, topWv);
+			WorldEntityCoords.ResolvedPoint point = WorldEntityCoords.resolveTopLevel(p, pwv, topWv, we);
 			return point != null ? new RenderCenter(client, topWv, point.worldPoint, point.localPoint, point.localPoint, false) : null;
 		}
 		LocalPoint boatLp = we.getLocalLocation();

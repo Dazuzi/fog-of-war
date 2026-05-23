@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.Player;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameStateChanged;
@@ -65,8 +66,9 @@ public class AreaExclusionManager extends LifecycleComponent {
 		if (onTransition != null) onTransition.run();
 	}
 	private WorldPoint currentPlayerWorldPoint() {
-		if (client.getLocalPlayer() == null) return null;
-		LocalPoint localPoint = client.getLocalPlayer().getLocalLocation();
+		Player player = client.getLocalPlayer();
+		if (player == null) return null;
+		LocalPoint localPoint = player.getLocalLocation();
 		if (localPoint == null) return null;
 		return WorldPoint.fromLocalInstance(client, localPoint);
 	}
