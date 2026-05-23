@@ -26,6 +26,6 @@ final class ActorHullCache {
 		Rectangle bounds;
 		int wx, wy, plane, anim, frame, pose, poseFrame;
 		int localX, localY, canvasX, canvasY;
-		int camX, camY, camZ, camPitch, camYaw;
+		int camX, camY, camZ, camPitch, camYaw, scale, vpX, vpY, vpW, vpH;
 	}
 }

@@ -40,7 +40,7 @@ final class ActorCutoutMask {
 	private Rectangle viewport;
 	private Player localPlayer;
 	private int exclusionCandidateCount;
-	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw;
+	private int lastCamX, lastCamY, lastCamZ, lastCamPitch, lastCamYaw, lastScale, lastVpX, lastVpY, lastVpW, lastVpH;
 	private boolean retainHullCache;
 	ActorCutoutMask(Client client, VisibleActorTracker visibleActorTracker) {
 		this.client = client;
@@ -80,6 +80,11 @@ final class ActorCutoutMask {
 		lastCamZ = client.getCameraZ();
 		lastCamPitch = client.getCameraPitch();
 		lastCamYaw = client.getCameraYaw();
+		lastScale = client.getScale();
+		lastVpX = client.getViewportXOffset();
+		lastVpY = client.getViewportYOffset();
+		lastVpW = client.getViewportWidth();
+		lastVpH = client.getViewportHeight();
 	}
 	private void subtractAllExclusionAreas(Area fogArea, GeneralPath boundary) {
 		for (int i = 0; i < exclusionCandidateCount; i++) {
@@ -113,7 +118,9 @@ final class ActorCutoutMask {
 				&& cached.anim == anim && cached.frame == frame
 				&& cached.pose == pose && cached.poseFrame == poseFrame
 				&& cached.camX == lastCamX && cached.camY == lastCamY && cached.camZ == lastCamZ
-				&& cached.camPitch == lastCamPitch && cached.camYaw == lastCamYaw;
+				&& cached.camPitch == lastCamPitch && cached.camYaw == lastCamYaw
+				&& cached.scale == lastScale
+				&& cached.vpX == lastVpX && cached.vpY == lastVpY && cached.vpW == lastVpW && cached.vpH == lastVpH;
 		if (hit) {
 			if (!viewport.intersects(cached.bounds)) return;
 			if (!priority && boundary.contains(cached.bounds)) return;
@@ -236,6 +243,11 @@ final class ActorCutoutMask {
 		cached.camZ = lastCamZ;
 		cached.camPitch = lastCamPitch;
 		cached.camYaw = lastCamYaw;
+		cached.scale = lastScale;
+		cached.vpX = lastVpX;
+		cached.vpY = lastVpY;
+		cached.vpW = lastVpW;
+		cached.vpH = lastVpH;
 		if (!viewport.intersects(bounds)) return null;
 		if (candidate.actor != localPlayer && boundary.contains(bounds)) return null;
 		cached.area = new Area(hull);
