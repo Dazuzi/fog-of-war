@@ -83,18 +83,15 @@ public class AreaExclusionManager extends LifecycleComponent {
 			this.minY = minY;
 			this.maxX = maxX;
 			this.maxY = maxY;
-			this.planeMask = planeMask(planes);
+			int mask = 0;
+			for (int plane : planes) { if (plane >= 0 && plane < Integer.SIZE) mask |= 1 << plane; }
+			this.planeMask = mask;
 		}
 		boolean contains(WorldPoint point) {
 			int plane = point.getPlane();
 			return plane >= 0 && plane < Integer.SIZE && (planeMask & (1 << plane)) != 0 &&
 					point.getX() >= minX && point.getX() <= maxX &&
 					point.getY() >= minY && point.getY() <= maxY;
-		}
-		private static int planeMask(int... planes) {
-			int mask = 0;
-			for (int plane : planes) { if (plane >= 0 && plane < Integer.SIZE) mask |= 1 << plane; }
-			return mask;
 		}
 	}
 }
