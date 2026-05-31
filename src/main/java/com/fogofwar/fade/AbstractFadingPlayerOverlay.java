@@ -1,5 +1,7 @@
 package com.fogofwar.fade;
 import com.fogofwar.config.FogOfWarConfig;
+import com.fogofwar.render.RenderCenter;
+import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.WorldView;
@@ -16,11 +18,13 @@ abstract class AbstractFadingPlayerOverlay extends Overlay {
 	protected final FogOfWarConfig config;
 	private final FadingPlayerManager manager;
 	private final ClientState clientState;
-	AbstractFadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState, OverlayLayer layer) {
+	private final RenderCenterProvider renderCenterProvider;
+	AbstractFadingPlayerOverlay(Client client, FogOfWarConfig config, FadingPlayerManager manager, ClientState clientState, RenderCenterProvider renderCenterProvider, OverlayLayer layer) {
 		this.client = client;
 		this.config = config;
 		this.manager = manager;
 		this.clientState = clientState;
+		this.renderCenterProvider = renderCenterProvider;
 		setPosition(OverlayPosition.DYNAMIC);
 		setPriority(Overlay.PRIORITY_HIGH);
 		setLayer(layer);
@@ -30,8 +34,9 @@ abstract class AbstractFadingPlayerOverlay extends Overlay {
 		if (!showsMarker() || clientState.isClientNotReady()) return null;
 		Collection<FadingPlayer> fadingPlayers = manager.getFadingPlayers().values();
 		if (fadingPlayers.isEmpty()) return null;
-		WorldView wv = client.getTopLevelWorldView();
-		if (wv == null) return null;
+		RenderCenter rc = renderCenterProvider.get();
+		if (rc == null) return null;
+		WorldView wv = rc.getWorldView();
 		return renderPlayers(graphics, wv, fadingPlayers);
 	}
 	Dimension renderPlayers(Graphics2D graphics, WorldView wv, Collection<FadingPlayer> fadingPlayers) {

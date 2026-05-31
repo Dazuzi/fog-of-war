@@ -153,7 +153,7 @@ public interface FogOfWarConfig extends Config {
 			section = fadingPlayerSection,
 			position = 2
 	)
-	default int fadeDurationTicks() { return 3; }
+	default int fadeDurationTicks() { return 2; }
 	@ConfigItem(
 			keyName = "onlyFadeAtRenderEdge",
 			name = "Render near edge only",

@@ -1,6 +1,7 @@
 package com.fogofwar.debug;
 import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.coord.WorldEntityCoords;
+import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
@@ -17,11 +18,13 @@ public class DebugOverlay extends OverlayPanel {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
+	private final RenderCenterProvider renderCenterProvider;
 	@Inject
-	public DebugOverlay(Client client, FogOfWarConfig config, ClientState clientState) {
+	public DebugOverlay(Client client, FogOfWarConfig config, ClientState clientState, RenderCenterProvider renderCenterProvider) {
 		this.client = client;
 		this.config = config;
 		this.clientState = clientState;
+		this.renderCenterProvider = renderCenterProvider;
 		setPosition(OverlayPosition.TOP_LEFT);
 	}
 	@Override
@@ -39,11 +42,11 @@ public class DebugOverlay extends OverlayPanel {
 	private WorldView getWorldView() {
 		Player localPlayer = client.getLocalPlayer();
 		WorldView wv = localPlayer != null ? localPlayer.getWorldView() : null;
-		if (wv == null) wv = client.getTopLevelWorldView();
+		if (wv == null) wv = renderCenterProvider.getTopLevelWorldView();
 		return wv;
 	}
 	private WorldEntityConfig getWorldEntityConfig(WorldView worldView) {
-		WorldEntity worldEntity = WorldEntityCoords.getWorldEntity(worldView, client.getTopLevelWorldView());
+		WorldEntity worldEntity = WorldEntityCoords.getWorldEntity(worldView, renderCenterProvider.getTopLevelWorldView());
 		return worldEntity != null ? worldEntity.getConfig() : null;
 	}
 	private void addLine(String left, Object right) {

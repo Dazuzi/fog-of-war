@@ -16,7 +16,6 @@ import com.fogofwar.render.world.VisibleActorTracker;
 import com.fogofwar.state.ClientState;
 import com.google.inject.Provides;
 import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.GameTick;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
@@ -66,7 +65,6 @@ public class FogOfWarPlugin extends Plugin {
 	private List<ToggleSpec> overlayToggles = List.of();
 	private List<LifecycleSpec> lifecycleComponents = List.of();
 	private volatile boolean started;
-	private boolean lastSailingState;
 	@Override
 	protected void startUp() {
 		started = true;
@@ -78,7 +76,6 @@ public class FogOfWarPlugin extends Plugin {
 	protected void shutDown() {
 		areaExclusionManager.setOnTransition(null);
 		started = false;
-		lastSailingState = false;
 		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.disable();
 		worldOverlay.clearCaches();
 		minimapOverlay.clearCaches();
@@ -93,7 +90,7 @@ public class FogOfWarPlugin extends Plugin {
 				new ToggleSpec(fadingPlayerMinimapOverlay, state -> state.fadingMinimapActive));
 		lifecycleComponents = List.of(
 				new LifecycleSpec(areaExclusionManager, state -> state.anyConfigured),
-				new LifecycleSpec(renderCenterProvider, state -> state.overlayActive),
+				new LifecycleSpec(renderCenterProvider, state -> state.overlayActive || state.debugActive),
 				new LifecycleSpec(fadingPlayerManager, state -> state.fadingActive),
 				new LifecycleSpec(visibleActorTracker, state -> state.visibleActorTrackingActive));
 	}
@@ -108,16 +105,13 @@ public class FogOfWarPlugin extends Plugin {
 	public void onGameStateChanged(GameStateChanged event) { updateComponents(); }
 	@Subscribe
 	@SuppressWarnings("unused")
-	public void onGameTick(GameTick event) {
-		if (!config.disableWhileSailing()) return;
-		boolean sailing = clientState.isSailing();
-		if (sailing == lastSailingState) return;
-		updateComponents(sailing);
-	}
-	@Subscribe
-	@SuppressWarnings("unused")
 	public void onVarbitChanged(VarbitChanged event) {
-		if (!config.onlyInWilderness() || event.getVarbitId() != VarbitID.INSIDE_WILDERNESS) return;
+		int id = event.getVarbitId();
+		if (id == VarbitID.SAILING_BOARDED_BOAT) {
+			if (config.disableWhileSailing()) updateComponents();
+			return;
+		}
+		if (!config.onlyInWilderness() || id != VarbitID.INSIDE_WILDERNESS) return;
 		updateComponents();
 	}
 	private void updateComponents() {
@@ -126,7 +120,6 @@ public class FogOfWarPlugin extends Plugin {
 	}
 	private void updateComponents(boolean sailing) {
 		if (!started) return;
-		lastSailingState = sailing;
 		ComponentState state = createComponentState(sailing);
 		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.update(state);
 		for (LifecycleSpec component : lifecycleComponents) component.update(state);

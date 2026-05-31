@@ -33,11 +33,10 @@ public final class RenderCenter {
 		this.canvasCenterPoint = Perspective.localToCanvas(client, snappedCenter, worldPoint.getPlane());
 		this.minimapCenterPoint = Perspective.localToMinimap(client, snappedCenter, MINIMAP_PROJECTION_DISTANCE);
 	}
-	public static RenderCenter resolve(Client client) {
+	public static RenderCenter resolve(Client client, WorldView topWv) {
 		Player p = client.getLocalPlayer();
 		if (p == null) return null;
 		WorldView pwv = p.getWorldView();
-		WorldView topWv = client.getTopLevelWorldView();
 		if (topWv == null) return null;
 		if (pwv == null || pwv.isTopLevel()) {
 			WorldPoint wp = p.getWorldLocation();

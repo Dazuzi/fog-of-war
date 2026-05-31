@@ -1,5 +1,4 @@
 package com.fogofwar.state;
-import com.fogofwar.coord.WorldEntityCoords;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.gameval.VarbitID;
@@ -11,6 +10,6 @@ public class ClientState {
 	@Inject
 	public ClientState(Client client) { this.client = client; }
 	public boolean isNotInWilderness() { return client.getVarbitValue(VarbitID.INSIDE_WILDERNESS) != 1; }
-	public boolean isSailing() { return WorldEntityCoords.isPlayerOnShip(client.getLocalPlayer(), client.getTopLevelWorldView()); }
+	public boolean isSailing() { return client.getVarbitValue(VarbitID.SAILING_BOARDED_BOAT) == 1; }
 	public boolean isClientNotReady() { return client.getGameState() != GameState.LOGGED_IN || client.getLocalPlayer() == null; }
 }

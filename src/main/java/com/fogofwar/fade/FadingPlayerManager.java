@@ -3,6 +3,7 @@ import com.fogofwar.config.FogOfWarConfig;
 import com.fogofwar.area.AreaExclusionManager;
 import com.fogofwar.coord.WorldEntityCoords;
 import com.fogofwar.lifecycle.LifecycleComponent;
+import com.fogofwar.render.RenderCenterProvider;
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -25,6 +26,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final AreaExclusionManager areaExclusionManager;
+	private final RenderCenterProvider renderCenterProvider;
 	@Getter
 	private final Map<Player, FadingPlayer> fadingPlayers = new HashMap<>();
 	private Map<Player, TrackedPlayer> lastTickPlayerLocations = new HashMap<>();
@@ -33,11 +35,12 @@ public class FadingPlayerManager extends LifecycleComponent {
 	private final Set<String> currentPlayerNames = new HashSet<>();
 	private final FadingPlayerPredictor predictor = new FadingPlayerPredictor();
 	@Inject
-	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, AreaExclusionManager areaExclusionManager) {
+	public FadingPlayerManager(Client client, FogOfWarConfig config, EventBus eventBus, AreaExclusionManager areaExclusionManager, RenderCenterProvider renderCenterProvider) {
 		super(eventBus);
 		this.client = client;
 		this.config = config;
 		this.areaExclusionManager = areaExclusionManager;
+		this.renderCenterProvider = renderCenterProvider;
 	}
 	@Override
 	protected void onStop() { clearAllTracking(); }
@@ -50,7 +53,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
 		Player localPlayer = client.getLocalPlayer();
-		WorldView worldView = client.getTopLevelWorldView();
+		WorldView worldView = renderCenterProvider.getTopLevelWorldView();
 		WorldPoint localPlayerLocation = localPlayer != null && worldView != null ? WorldEntityCoords.playerToTopLevel(localPlayer, null, worldView) : null;
 		if (client.getGameState() != GameState.LOGGED_IN || localPlayer == null || worldView == null || localPlayerLocation == null) {
 			clearAllTracking();
@@ -60,7 +63,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 			clearAllTracking();
 			return;
 		}
-		boolean onWorldEntity = isOnWorldEntity(localPlayer);
+		boolean onWorldEntity = WorldEntityCoords.isPlayerOnShip(localPlayer, worldView);
 		if (config.disableWhileSailing() && onWorldEntity) {
 			clearAllTracking();
 			return;
@@ -82,7 +85,7 @@ public class FadingPlayerManager extends LifecycleComponent {
 		fadingPlayers.entrySet().removeIf(entry -> {
 			FadingPlayer fp = entry.getValue();
 			fp.setTicksSinceDisappeared(fp.getTicksSinceDisappeared() + 1);
-			if (fp.getTicksSinceDisappeared() > fadeDuration) return true;
+			if (fp.getTicksSinceDisappeared() >= fadeDuration) return true;
 			WorldPoint markerLocation = fp.getMarkerLocation();
 			if (fp.getTicksSinceDisappeared() > 1 && markerLocation.distanceTo(localPlayerLocation) <= fp.getRenderDistance()) return true;
 			WorldPoint velocity = fp.getVelocity();
@@ -143,9 +146,6 @@ public class FadingPlayerManager extends LifecycleComponent {
 			if (playerLocation != null) currentPlayerLocations.put(player, new TrackedPlayer(playerLocation, renderDistance));
 			if (player.getName() != null) currentPlayerNames.add(player.getName());
 		}
-	}
-	private boolean isOnWorldEntity(Player player) {
-		return WorldEntityCoords.isPlayerOnShip(player, client.getTopLevelWorldView());
 	}
 	@Getter
 	private static class TrackedPlayer {
