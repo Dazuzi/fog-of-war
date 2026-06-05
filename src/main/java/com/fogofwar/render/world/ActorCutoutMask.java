@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 final class ActorCutoutMask {
 	private static final int ACTOR_CUTOUT_BUCKET_SIZE = 48;
 	private static final int PRIORITY_SCORE = Integer.MIN_VALUE / 2;
@@ -59,12 +60,15 @@ final class ActorCutoutMask {
 		this.viewport = viewport;
 		this.localPlayer = client.getLocalPlayer();
 		retainHullCache = true;
+		Set<Actor> visibleActors = visibleActorTracker.getVisibleActors();
 		boolean all = limit == Integer.MAX_VALUE;
+		int visibleCount = visibleActors.size();
+		boolean ranked = !all && visibleCount + (localPlayer != null && !visibleActors.contains(localPlayer) ? 1 : 0) > limit;
 		int bucketColumns = all ? 1 : Math.max(1, (viewport.width + ACTOR_CUTOUT_BUCKET_SIZE - 1) / ACTOR_CUTOUT_BUCKET_SIZE);
 		try {
-			collectExclusionCandidates(worldView, boundary, centerLp, plane, radius, !all, bucketColumns);
+			collectExclusionCandidates(visibleActors, worldView, boundary, centerLp, plane, radius, ranked, bucketColumns);
 			if (exclusionCandidateCount == 0) return;
-			if (all) subtractAllExclusionAreas(fogArea, boundary);
+			if (all || !ranked || exclusionCandidateCount <= limit) subtractAllExclusionAreas(fogArea, boundary);
 			else {
 				exclusionCandidates.subList(0, exclusionCandidateCount).sort(ACTOR_CUTOUT_CANDIDATE_ORDER);
 				subtractSelectedExclusionAreas(fogArea, boundary, limit, bucketColumns);
@@ -93,11 +97,11 @@ final class ActorCutoutMask {
 			fogArea.subtract(entryArea);
 		}
 	}
-	private void collectExclusionCandidates(WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, boolean ranked, int bucketColumns) {
+	private void collectExclusionCandidates(Set<Actor> visibleActors, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, boolean ranked, int bucketColumns) {
 		exclusionCandidateCount = 0;
 		int localRadius = radius * Perspective.LOCAL_TILE_SIZE + Perspective.LOCAL_HALF_TILE_SIZE;
 		if (localPlayer != null) collectExclusionCandidate(localPlayer, worldView, boundary, centerLp, plane, localRadius, ranked, bucketColumns);
-		for (Actor actor : visibleActorTracker.getVisibleActors()) {
+		for (Actor actor : visibleActors) {
 			if (actor == localPlayer) continue;
 			collectExclusionCandidate(actor, worldView, boundary, centerLp, plane, localRadius, ranked, bucketColumns);
 		}
@@ -125,7 +129,10 @@ final class ActorCutoutMask {
 				&& cached.vpX == lastVpX && cached.vpY == lastVpY && cached.vpW == lastVpW && cached.vpH == lastVpH;
 		if (hit) {
 			if (!viewport.intersects(cached.bounds)) return;
-			if (!priority && boundary.contains(cached.bounds)) return;
+			if (!priority) {
+				boolean inside = boundary.contains(cached.bounds);
+				if (inside) return;
+			}
 		}
 		int localX, localY, canvasX, canvasY, edgeDistance;
 		if (hit) {
@@ -213,18 +220,32 @@ final class ActorCutoutMask {
 		exclusionCandidateCount = 0;
 	}
 	private Area getCandidateArea(ActorCutoutCandidate candidate, GeneralPath boundary) {
+		Shape hull = getCandidateHull(candidate, boundary);
+		if (hull == null) return null;
+		ActorHullCache.Entry cached = hullCache.get(candidate.actor);
+		if (cached == null) return null;
+		if (cached.area == null) cached.area = new Area(hull);
+		return cached.area;
+	}
+	private Shape getCandidateHull(ActorCutoutCandidate candidate, GeneralPath boundary) {
 		ActorHullCache.Entry cached = candidate.cached;
-		if (candidate.hit) {
-			if (cached.area == null) cached.area = new Area(cached.hull);
-			return cached.area;
-		}
+		if (candidate.hit) return cached.hull;
 		Shape hull = candidate.actor.getConvexHull();
 		if (hull == null) {
 			if (cached != null) hullCache.remove(candidate.actor);
 			return null;
 		}
 		Rectangle bounds = hull.getBounds();
-		cached = hullCache.getOrCreate(candidate.actor);
+		cache(candidate, hull, bounds);
+		if (!viewport.intersects(bounds)) return null;
+		if (candidate.actor != localPlayer) {
+			boolean inside = boundary.contains(bounds);
+			if (inside) return null;
+		}
+		return hull;
+	}
+	private void cache(ActorCutoutCandidate candidate, Shape hull, Rectangle bounds) {
+		ActorHullCache.Entry cached = hullCache.getOrCreate(candidate.actor);
 		cached.hull = hull;
 		cached.bounds = bounds;
 		cached.area = null;
@@ -249,10 +270,6 @@ final class ActorCutoutMask {
 		cached.vpY = lastVpY;
 		cached.vpW = lastVpW;
 		cached.vpH = lastVpH;
-		if (!viewport.intersects(bounds)) return null;
-		if (candidate.actor != localPlayer && boundary.contains(bounds)) return null;
-		cached.area = new Area(hull);
-		return cached.area;
 	}
 	private static final class ActorCutoutCandidate {
 		private Actor actor;
