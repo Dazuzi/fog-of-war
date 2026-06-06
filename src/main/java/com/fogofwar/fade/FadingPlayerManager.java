@@ -52,10 +52,22 @@ public class FadingPlayerManager extends LifecycleComponent {
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) {
+		if (client.getGameState() != GameState.LOGGED_IN) {
+			clearAllTracking();
+			return;
+		}
 		Player localPlayer = client.getLocalPlayer();
+		if (localPlayer == null) {
+			clearAllTracking();
+			return;
+		}
 		WorldView worldView = renderCenterProvider.getTopLevelWorldView();
-		WorldPoint localPlayerLocation = localPlayer != null && worldView != null ? WorldEntityCoords.playerToTopLevel(localPlayer, null, worldView) : null;
-		if (client.getGameState() != GameState.LOGGED_IN || localPlayer == null || worldView == null || localPlayerLocation == null) {
+		if (worldView == null) {
+			clearAllTracking();
+			return;
+		}
+		WorldPoint localPlayerLocation = WorldEntityCoords.playerToTopLevel(localPlayer, null, worldView);
+		if (localPlayerLocation == null) {
 			clearAllTracking();
 			return;
 		}

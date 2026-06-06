@@ -7,14 +7,16 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
+import java.awt.geom.Rectangle2D;
 final class MinimapFogMask {
 	private final FogOfWarConfig config;
 	private final GeneralPath fogFillPath = new GeneralPath(GeneralPath.WIND_EVEN_ODD);
 	private final StrokeCache borderStroke = new StrokeCache();
 	MinimapFogMask(FogOfWarConfig config) { this.config = config; }
 	void renderFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath path) {
-		if (path.contains(minimapClipShape.getBounds2D())) return;
-		Rectangle b = minimapClipShape.getBounds();
+		Rectangle2D bounds = minimapClipShape.getBounds2D();
+		if (path.contains(bounds)) return;
+		Rectangle b = bounds.getBounds();
 		FogRender.fill(fogFillPath, b, 1, path);
 		graphics.setColor(config.minimapFogColour());
 		graphics.fill(fogFillPath);

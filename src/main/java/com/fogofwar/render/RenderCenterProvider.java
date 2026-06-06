@@ -36,7 +36,7 @@ public class RenderCenterProvider extends LifecycleComponent {
 		else if (topWorldView == null) topWorldView = client.getTopLevelWorldView();
 		return topWorldView;
 	}
-	public void clear() {
+	private void clear() {
 		current = null;
 		resolved = false;
 	}

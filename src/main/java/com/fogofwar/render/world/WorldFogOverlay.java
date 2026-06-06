@@ -37,7 +37,10 @@ public class WorldFogOverlay extends Overlay {
 		setPriority(Overlay.PRIORITY_LOW);
 		setLayer(OverlayLayer.ABOVE_SCENE);
 	}
-	public void clearCaches() { actorCutouts.clearCaches(); }
+	public void clearCaches() {
+		renderBoundary.clearCaches();
+		actorCutouts.clearCaches();
+	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		if (clientState.isClientNotReady()) return null;

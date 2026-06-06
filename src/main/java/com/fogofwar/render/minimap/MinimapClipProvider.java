@@ -21,6 +21,11 @@ public final class MinimapClipProvider {
 	private Shape cachedClipShape;
 	private long cachedOrbsHash;
 	private boolean cachedResized;
+	private Widget probeWidget;
+	private Rectangle probeBounds;
+	private long probeOrbsHash;
+	private int probeCycle = Integer.MIN_VALUE;
+	private boolean probeResized;
 	@Inject
 	public MinimapClipProvider(Client client) { this.client = client; }
 	public Widget getMinimapWidget() {
@@ -34,12 +39,31 @@ public final class MinimapClipProvider {
 		cachedMinimapBounds = null;
 		cachedClipShape = null;
 		cachedOrbsHash = 0;
+		probeWidget = null;
+		probeBounds = null;
+		probeOrbsHash = 0;
+		probeCycle = Integer.MIN_VALUE;
 		Arrays.fill(currentOrbBounds, null);
 	}
 	public Shape getClipShape(Widget minimapWidget) {
-		Rectangle bounds = minimapWidget.getBounds();
-		boolean resized = client.isResized();
-		long orbsHash = collectOrbBoundsAndHash();
+		int cycle = client.getGameCycle();
+		Rectangle bounds;
+		boolean resized;
+		long orbsHash;
+		if (probeWidget == minimapWidget && probeCycle == cycle) {
+			bounds = probeBounds;
+			resized = probeResized;
+			orbsHash = probeOrbsHash;
+		} else {
+			bounds = minimapWidget.getBounds();
+			resized = client.isResized();
+			orbsHash = collectOrbBoundsAndHash();
+			probeWidget = minimapWidget;
+			probeBounds = bounds;
+			probeResized = resized;
+			probeOrbsHash = orbsHash;
+			probeCycle = cycle;
+		}
 		if (cachedClipShape != null && bounds.equals(cachedMinimapBounds) && orbsHash == cachedOrbsHash && resized == cachedResized) return cachedClipShape;
 		Area clipArea = createEllipse(bounds, resized ? RESIZED_MINIMAP_CLIP_PADDING : FIXED_MINIMAP_CLIP_PADDING);
 		for (Rectangle ob : currentOrbBounds) {

@@ -134,13 +134,12 @@ final class ActorCutoutMask {
 				if (inside) return;
 			}
 		}
-		int localX, localY, canvasX, canvasY, edgeDistance;
+		int localX, localY, canvasX, canvasY, edgeDistance = 0;
 		if (hit) {
 			localX = cached.localX;
 			localY = cached.localY;
 			canvasX = cached.canvasX;
 			canvasY = cached.canvasY;
-			edgeDistance = getEdgeDistance(localX, localY, centerLp, localRadius);
 		} else {
 			localX = lp.getX();
 			localY = lp.getY();
@@ -155,6 +154,7 @@ final class ActorCutoutMask {
 		int bucket = -1, score = 0;
 		if (ranked) {
 			if (viewport.contains(canvasX, canvasY)) bucket = getExclusionBucket(canvasX, canvasY, bucketColumns);
+			if (hit) edgeDistance = getEdgeDistance(localX, localY, centerLp, localRadius);
 			score = getCandidateScore(actor, hit, edgeDistance);
 		}
 		addExclusionCandidate(actor, cached, location.worldPoint, anim, frame, pose, poseFrame, hit, score, bucket, canvasX, canvasY, localX, localY);
@@ -208,10 +208,12 @@ final class ActorCutoutMask {
 			ActorCutoutCandidate candidate = exclusionCandidates.get(i);
 			if (candidate.actor != localPlayer) continue;
 			Area entryArea = getCandidateArea(candidate, boundary);
-			if (entryArea == null) continue;
-			candidate.selected = true;
-			fogArea.subtract(entryArea);
-			selected++;
+			if (entryArea != null) {
+				candidate.selected = true;
+				fogArea.subtract(entryArea);
+				selected++;
+			}
+			break;
 		}
 		return selected;
 	}
@@ -222,7 +224,7 @@ final class ActorCutoutMask {
 	private Area getCandidateArea(ActorCutoutCandidate candidate, GeneralPath boundary) {
 		Shape hull = getCandidateHull(candidate, boundary);
 		if (hull == null) return null;
-		ActorHullCache.Entry cached = hullCache.get(candidate.actor);
+		ActorHullCache.Entry cached = candidate.cached;
 		if (cached == null) return null;
 		if (cached.area == null) cached.area = new Area(hull);
 		return cached.area;
@@ -246,6 +248,7 @@ final class ActorCutoutMask {
 	}
 	private void cache(ActorCutoutCandidate candidate, Shape hull, Rectangle bounds) {
 		ActorHullCache.Entry cached = hullCache.getOrCreate(candidate.actor);
+		candidate.cached = cached;
 		cached.hull = hull;
 		cached.bounds = bounds;
 		cached.area = null;
