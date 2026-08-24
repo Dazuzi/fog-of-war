@@ -1,15 +1,17 @@
 package com.fogofwar.fade;
 import net.runelite.api.coords.WorldPoint;
 final class FadingPlayerPredictor {
-	WorldPoint getVelocity(WorldPoint lastLocation, WorldPoint twoTicksAgoLocation) {
+	private static final WorldPoint ZERO_VELOCITY = new WorldPoint(0, 0, 0);
+	private FadingPlayerPredictor() {}
+	static WorldPoint getVelocity(WorldPoint lastLocation, WorldPoint twoTicksAgoLocation) {
 		return twoTicksAgoLocation != null
 				? new WorldPoint(lastLocation.getX() - twoTicksAgoLocation.getX(), lastLocation.getY() - twoTicksAgoLocation.getY(), 0)
-				: new WorldPoint(0, 0, 0);
+				: ZERO_VELOCITY;
 	}
-	boolean isNearRenderLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, int renderDistance) {
+	static boolean isNearRenderLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, int renderDistance) {
 		return isAtRenderLimit(lastLocation, localPlayerLocation, renderDistance) || isRunningNearLimit(lastLocation, localPlayerLocation, velocity, renderDistance);
 	}
-	WorldPoint getInitialFadeLocation(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, boolean extrapolate, int renderDistance, boolean nearRenderLimit) {
+	static WorldPoint getInitialFadeLocation(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, boolean extrapolate, int renderDistance, boolean nearRenderLimit) {
 		if (!extrapolate) return lastLocation;
 		int dx = lastLocation.getX() - localPlayerLocation.getX();
 		int dy = lastLocation.getY() - localPlayerLocation.getY();
@@ -44,10 +46,10 @@ final class FadingPlayerPredictor {
 		}
 		return initialFadeLocation;
 	}
-	private boolean isAtRenderLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, int renderDistance) {
+	private static boolean isAtRenderLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, int renderDistance) {
 		return lastLocation.distanceTo(localPlayerLocation) >= renderDistance - 1;
 	}
-	private boolean isRunningNearLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, int renderDistance) {
+	private static boolean isRunningNearLimit(WorldPoint lastLocation, WorldPoint localPlayerLocation, WorldPoint velocity, int renderDistance) {
 		int velocityMagnitude = Math.abs(velocity.getX()) + Math.abs(velocity.getY());
 		return lastLocation.distanceTo(localPlayerLocation) >= renderDistance - 2 && velocityMagnitude >= 2;
 	}

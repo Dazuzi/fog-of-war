@@ -1,16 +1,9 @@
 package com.fogofwar.config;
 import net.runelite.client.config.*;
 import java.awt.*;
-@ConfigGroup(FogOfWarConfigMigration.CONFIG_GROUP)
+@ConfigGroup(FogOfWarConfig.CONFIG_GROUP)
 public interface FogOfWarConfig extends Config {
-	@ConfigItem(
-			keyName = "settingsVersion",
-			name = "Settings version",
-			description = "",
-			hidden = true
-	)
-	@SuppressWarnings("unused")
-	default int settingsVersion() { return 0; }
+	String CONFIG_GROUP = "fogofwar";
 	@ConfigItem(
 			keyName = "onlyInWilderness",
 			name = "Only in Wilderness",

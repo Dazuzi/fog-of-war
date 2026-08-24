@@ -17,18 +17,21 @@ import java.util.Set;
 public class VisibleActorTracker extends LifecycleComponent implements RenderCallback {
 	private final RenderCallbackManager renderCallbackManager;
 	@Getter
-	private final Set<Actor> visibleActors = Collections.newSetFromMap(new IdentityHashMap<>(256));
+	private Set<Actor> visibleActors = Collections.emptySet();
 	@Inject
 	public VisibleActorTracker(EventBus eventBus, RenderCallbackManager renderCallbackManager) {
 		super(eventBus);
 		this.renderCallbackManager = renderCallbackManager;
 	}
 	@Override
-	protected void onStart() { renderCallbackManager.register(this); }
+	protected void onStart() {
+		visibleActors = Collections.newSetFromMap(new IdentityHashMap<>(256));
+		renderCallbackManager.register(this);
+	}
 	@Override
 	protected void onStop() {
 		renderCallbackManager.unregister(this);
-		visibleActors.clear();
+		visibleActors = Collections.emptySet();
 	}
 	@Subscribe
 	@SuppressWarnings("unused")

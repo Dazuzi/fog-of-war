@@ -5,28 +5,16 @@ import lombok.Setter;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.Player;
+import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.List;
 @Singleton
 public class AreaExclusionManager extends LifecycleComponent {
-	private static final List<ExcludedArea> EXCLUDED_AREAS = List.of(
-			new ExcludedArea(2367, 5053, 2432, 5119, 0),			// TzHaar Fight Cave
-			new ExcludedArea(2256, 5328, 2286, 5359, 0),			// Inferno
-			new ExcludedArea(3500, 5100, 4000, 5440, 0, 1),		// Tombs of Amascut
-			new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2),	// Theatre of Blood
-			new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 1
-			new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 2
-			new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2),	// Hallowed Sepulchre Floors 3-5
-			new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2),	// Chambers of Xeric
-			new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2)	// Chambers of Xeric
-	);
 	private final Client client;
 	@Getter
 	private boolean playerInExcludedArea = false;
@@ -39,25 +27,22 @@ public class AreaExclusionManager extends LifecycleComponent {
 	}
 	@Override
 	protected void onStart() {
-		if (client.getGameState() == GameState.LOGGED_IN) checkArea();
+		if (client.getGameState() == GameState.LOGGED_IN) playerInExcludedArea = isPlayerInExcludedAreaNow();
 	}
 	@Override
-	protected void onStop() { setPlayerInExcludedArea(false); }
-	@Subscribe
-	@SuppressWarnings("unused")
-	public void onGameStateChanged(GameStateChanged event) {
-		if (event.getGameState() == GameState.LOGGED_IN) checkArea();
-		else if (event.getGameState() == GameState.LOADING) setPlayerInExcludedArea(false);
-	}
+	protected void onStop() { playerInExcludedArea = false; }
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onGameTick(GameTick event) { checkArea(); }
 	private void checkArea() {
+		setPlayerInExcludedArea(isPlayerInExcludedAreaNow());
+	}
+	private boolean isPlayerInExcludedAreaNow() {
 		WorldPoint playerPoint = currentPlayerWorldPoint();
-		setPlayerInExcludedArea(playerPoint != null && isExcludedArea(playerPoint));
+		return playerPoint != null && isExcludedArea(playerPoint);
 	}
 	private boolean isExcludedArea(WorldPoint playerPoint) {
-		for (ExcludedArea area : EXCLUDED_AREAS) { if (area.contains(playerPoint)) return true; }
+		for (ExcludedArea area : ExcludedAreas.VALUES) { if (area.contains(playerPoint)) return true; }
 		return false;
 	}
 	private void setPlayerInExcludedArea(boolean value) {
@@ -68,9 +53,27 @@ public class AreaExclusionManager extends LifecycleComponent {
 	private WorldPoint currentPlayerWorldPoint() {
 		Player player = client.getLocalPlayer();
 		if (player == null) return null;
+		WorldView worldView = player.getWorldView();
+		if (worldView != null && worldView.isTopLevel() && !worldView.isInstance()) {
+			WorldPoint worldPoint = player.getWorldLocation();
+			if (worldPoint != null) return worldPoint;
+		}
 		LocalPoint localPoint = player.getLocalLocation();
 		if (localPoint == null) return null;
 		return WorldPoint.fromLocalInstance(client, localPoint);
+	}
+	private static final class ExcludedAreas {
+		private static final ExcludedArea[] VALUES = {
+				new ExcludedArea(2367, 5053, 2432, 5119, 0),			// TzHaar Fight Cave
+				new ExcludedArea(2256, 5328, 2286, 5359, 0),			// Inferno
+				new ExcludedArea(3500, 5100, 4000, 5440, 0, 1),		// Tombs of Amascut
+				new ExcludedArea(3136, 4216, 3366, 4474, 0, 1, 2),	// Theatre of Blood
+				new ExcludedArea(2215, 5935, 2325, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 1
+				new ExcludedArea(2475, 5935, 2585, 6035, 0, 1, 2),	// Hallowed Sepulchre Floor 2
+				new ExcludedArea(2225, 5795, 2575, 5915, 0, 1, 2),	// Hallowed Sepulchre Floors 3-5
+				new ExcludedArea(3150, 5690, 3380, 5770, 0, 1, 2),	// Chambers of Xeric
+				new ExcludedArea(3250, 5120, 3370, 5700, 0, 1, 2)	// Chambers of Xeric
+		};
 	}
 	static final class ExcludedArea {
 		private final int minX;

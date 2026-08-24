@@ -8,24 +8,32 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 final class ActorHullCache {
-	private final Map<Actor, Entry> entries = new IdentityHashMap<>();
-	private final Set<Actor> seen = Collections.newSetFromMap(new IdentityHashMap<>(256));
-	void clear() {
-		entries.clear();
-		seen.clear();
+	private static final Set<Actor> EMPTY = Collections.emptySet();
+	private static final Map<Actor, Entry> EMPTY_ENTRIES = Collections.emptyMap();
+	private Map<Actor, Entry> entries = EMPTY_ENTRIES;
+	private Set<Actor> seen = EMPTY;
+	private int expectedActors;
+	void beginFrame(int expectedActors) {
+		this.expectedActors = expectedActors;
+		if (seen == EMPTY) seen = Collections.newSetFromMap(new IdentityHashMap<>(expectedActors));
+		else seen.clear();
 	}
-	void beginFrame() { seen.clear(); }
 	void markSeen(Actor actor) { seen.add(actor); }
 	Entry get(Actor actor) { return entries.get(actor); }
-	Entry getOrCreate(Actor actor) { return entries.computeIfAbsent(actor, a -> new Entry()); }
-	void remove(Actor actor) { entries.remove(actor); }
-	void retainSeen() { entries.keySet().retainAll(seen); }
+	Entry getOrCreate(Actor actor) {
+		if (entries == EMPTY_ENTRIES) entries = new IdentityHashMap<>(expectedActors);
+		return entries.computeIfAbsent(actor, a -> new Entry());
+	}
+	void remove(Actor actor) { if (entries != EMPTY_ENTRIES) entries.remove(actor); }
+	void retainSeen() { if (entries != EMPTY_ENTRIES) entries.keySet().retainAll(seen); }
 	static final class Entry {
 		Shape hull;
 		Area area;
 		Rectangle bounds;
-		int wx, wy, plane, anim, frame, pose, poseFrame;
+		int wx, wy, plane, anim, frame, pose, poseFrame, orientation;
 		int localX, localY, canvasX, canvasY;
 		int camX, camY, camZ, camPitch, camYaw, scale, vpX, vpY, vpW, vpH;
+		float camFpX, camFpY, camFpZ, camFpPitch, camFpYaw;
+		boolean gpu;
 	}
 }

@@ -2,7 +2,6 @@ package com.fogofwar;
 import com.fogofwar.config.FadingPlayerMode;
 import com.fogofwar.config.FogDisplayMode;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.config.FogOfWarConfigMigration;
 import com.fogofwar.debug.DebugOverlay;
 import com.fogofwar.fade.FadingPlayerManager;
 import com.fogofwar.fade.FadingPlayerMinimapOverlay;
@@ -15,6 +14,7 @@ import com.fogofwar.render.world.WorldFogOverlay;
 import com.fogofwar.render.world.VisibleActorTracker;
 import com.fogofwar.state.ClientState;
 import com.google.inject.Provides;
+import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.VarbitID;
@@ -27,7 +27,9 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayManager;
 import javax.inject.Inject;
+import java.awt.Color;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 @PluginDescriptor(
 		name = "Fog of War",
@@ -35,7 +37,7 @@ import java.util.function.Predicate;
 		configName = "FogOfWarPlugin"
 )
 public class FogOfWarPlugin extends Plugin {
-	private static final String CONFIG_GROUP = FogOfWarConfigMigration.CONFIG_GROUP;
+	private static final String CONFIG_GROUP = FogOfWarConfig.CONFIG_GROUP;
 	@Inject
 	private FogOfWarConfig config;
 	@Inject
@@ -64,32 +66,34 @@ public class FogOfWarPlugin extends Plugin {
 	private DebugOverlay debugOverlay;
 	private List<ToggleSpec> overlayToggles = List.of();
 	private List<LifecycleSpec> lifecycleComponents = List.of();
+	private final AtomicBoolean componentUpdatePending = new AtomicBoolean();
 	private volatile boolean started;
+	private boolean sailingUpdatesActive;
+	private boolean wildernessUpdatesActive;
 	@Override
 	protected void startUp() {
 		started = true;
 		initComponents();
-		areaExclusionManager.setOnTransition(this::updateComponentsOnClientThread);
+		areaExclusionManager.setOnTransition(this::updateComponents);
 		updateComponentsOnClientThread();
 	}
 	@Override
 	protected void shutDown() {
 		areaExclusionManager.setOnTransition(null);
 		started = false;
+		sailingUpdatesActive = wildernessUpdatesActive = false;
 		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.disable();
-		worldOverlay.clearCaches();
-		minimapOverlay.clearCaches();
+		areaExclusionManager.stop();
 		for (LifecycleSpec component : lifecycleComponents) component.stop();
 	}
 	private void initComponents() {
 		overlayToggles = List.of(
-				new ToggleSpec(worldOverlay, state -> state.worldActive),
-				new ToggleSpec(minimapOverlay, state -> state.minimapActive),
-				new ToggleSpec(debugOverlay, state -> state.debugActive),
+				new ToggleSpec(worldOverlay, state -> state.worldActive, worldOverlay::clearCaches),
+				new ToggleSpec(minimapOverlay, state -> state.minimapActive, minimapOverlay::clearCaches),
+				new ToggleSpec(debugOverlay, state -> state.debugActive, debugOverlay::clearCaches),
 				new ToggleSpec(fadingPlayerOverlay, state -> state.fadingWorldActive),
-				new ToggleSpec(fadingPlayerMinimapOverlay, state -> state.fadingMinimapActive));
+				new ToggleSpec(fadingPlayerMinimapOverlay, state -> state.fadingMinimapActive, fadingPlayerMinimapOverlay::clearCaches));
 		lifecycleComponents = List.of(
-				new LifecycleSpec(areaExclusionManager, state -> state.anyConfigured),
 				new LifecycleSpec(renderCenterProvider, state -> state.overlayActive || state.debugActive),
 				new LifecycleSpec(fadingPlayerManager, state -> state.fadingActive),
 				new LifecycleSpec(visibleActorTracker, state -> state.visibleActorTrackingActive));
@@ -102,68 +106,107 @@ public class FogOfWarPlugin extends Plugin {
 	}
 	@Subscribe
 	@SuppressWarnings("unused")
-	public void onGameStateChanged(GameStateChanged event) { updateComponents(); }
+	public void onGameStateChanged(GameStateChanged event) {
+		if (event.getGameState() == GameState.LOGGED_IN) updateComponents();
+		else updateComponents(false);
+	}
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onVarbitChanged(VarbitChanged event) {
+		if (!started) return;
 		int id = event.getVarbitId();
 		if (id == VarbitID.SAILING_BOARDED_BOAT) {
-			if (config.disableWhileSailing()) updateComponents();
+			if (sailingUpdatesActive) updateComponents(event.getValue() == 1);
 			return;
 		}
-		if (!config.onlyInWilderness() || id != VarbitID.INSIDE_WILDERNESS) return;
-		updateComponents();
+		if (wildernessUpdatesActive && id == VarbitID.INSIDE_WILDERNESS) updateComponents();
 	}
 	private void updateComponents() {
 		if (!started) return;
-		updateComponents(clientState.isSailing());
+		updateComponents(clientState.isLoggedIn() && (config.disableWhileSailing() || config.showLandAreaWhileSailing()) && clientState.isSailing());
 	}
 	private void updateComponents(boolean sailing) {
 		if (!started) return;
+		sailingUpdatesActive = config.disableWhileSailing() || config.showLandAreaWhileSailing();
+		wildernessUpdatesActive = config.onlyInWilderness();
 		ComponentState state = createComponentState(sailing);
+		if (state.areaExclusionActive) {
+			boolean excluded = areaExclusionManager.isPlayerInExcludedArea();
+			areaExclusionManager.start();
+			if (excluded != areaExclusionManager.isPlayerInExcludedArea()) state = createComponentState(sailing);
+		} else areaExclusionManager.stop();
 		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.update(state);
 		for (LifecycleSpec component : lifecycleComponents) component.update(state);
+		if (!state.visibleActorTrackingActive) worldOverlay.clearActorCaches();
 	}
-	private void updateComponentsOnClientThread() { clientThread.invokeLater((Runnable) this::updateComponents); }
+	private void updateComponentsOnClientThread() {
+		if (!started || !componentUpdatePending.compareAndSet(false, true)) return;
+		clientThread.invokeLater(() -> {
+			componentUpdatePending.set(false);
+			updateComponents();
+		});
+	}
 	private ComponentState createComponentState(boolean sailing) {
+		if (!clientState.isLoggedIn()) return ComponentState.INACTIVE;
 		FogDisplayMode worldMode = config.worldDisplayMode();
 		FogDisplayMode minimapMode = config.minimapDisplayMode();
 		FadingPlayerMode fadingPlayerMode = config.playerFadeMarkerMode();
-		boolean worldConfigured = worldMode.isEnabled();
-		boolean minimapConfigured = minimapMode.isEnabled();
-		boolean fadingWorldConfigured = fadingPlayerMode.showsWorld();
-		boolean fadingMinimapConfigured = fadingPlayerMode.showsMinimap();
+		boolean showLandAreaWhileSailing = sailing && (worldMode.isEnabled() || minimapMode.isEnabled()) && config.showLandAreaWhileSailing();
+		Color worldFogColour = worldMode.showsFog() ? config.worldFogColour() : null;
+		Color worldBorderColour = worldMode.showsBorder() ? config.worldBorderColour() : null;
+		Color minimapFogColour = minimapMode.showsFog() ? config.minimapFogColour() : null;
+		Color minimapBorderColour = minimapMode.showsBorder() ? config.minimapBorderColour() : null;
+		boolean worldConfigured = hasVisibleFogOrBorder(worldMode, worldFogColour, worldBorderColour, showLandAreaWhileSailing);
+		boolean minimapConfigured = hasVisibleFogOrBorder(minimapMode, minimapFogColour, minimapBorderColour, showLandAreaWhileSailing);
+		boolean fadingWorldMode = fadingPlayerMode.showsWorld();
+		boolean fadingMinimapMode = fadingPlayerMode.showsMinimap();
+		Color fadeColour = fadingWorldMode || fadingMinimapMode ? config.fadeMarkerColour() : null;
+		boolean fadingWorldConfigured = fadingWorldMode && hasVisibleFadingWorld(fadingPlayerMode, fadeColour, config.showFadeMarkerNames());
+		boolean fadingMinimapConfigured = fadingMinimapMode && hasVisibleFadingMinimap(fadingPlayerMode, fadeColour);
 		boolean anyConfigured = worldConfigured || minimapConfigured || fadingWorldConfigured || fadingMinimapConfigured;
-		boolean areaEnabled = isCurrentAreaEnabled(sailing);
+		boolean debugConfigured = config.debugOverlayEnabled();
+		if (!anyConfigured && !debugConfigured) return ComponentState.INACTIVE;
+		boolean globallyEnabled = isGloballyEnabled(sailing);
+		boolean areaEnabled = globallyEnabled && (!anyConfigured || !areaExclusionManager.isPlayerInExcludedArea());
 		boolean worldActive = areaEnabled && worldConfigured;
 		boolean minimapActive = areaEnabled && minimapConfigured;
 		boolean fadingWorldActive = areaEnabled && fadingWorldConfigured;
 		boolean fadingMinimapActive = areaEnabled && fadingMinimapConfigured;
 		boolean fadingActive = fadingWorldActive || fadingMinimapActive;
 		boolean overlayActive = worldActive || minimapActive || fadingActive;
-		boolean visibleActorTrackingActive = worldActive && worldMode.showsFog() && config.actorCutoutLimit().isEnabled();
-		boolean debugActive = areaEnabled && config.debugOverlayEnabled();
-		return new ComponentState(worldActive, minimapActive, debugActive, fadingWorldActive, fadingMinimapActive, fadingActive, overlayActive, visibleActorTrackingActive, anyConfigured);
+		boolean visibleActorTrackingActive = worldActive && worldMode.showsFog() && (worldFogColour.getAlpha() > 0 || showLandAreaWhileSailing) && config.actorCutoutLimit().isEnabled();
+		boolean debugActive = areaEnabled && debugConfigured;
+		return new ComponentState(worldActive, minimapActive, debugActive, fadingWorldActive, fadingMinimapActive, fadingActive, overlayActive, visibleActorTrackingActive, globallyEnabled && anyConfigured);
 	}
-	private boolean isCurrentAreaEnabled(boolean sailing) {
+	static boolean hasVisibleFogOrBorder(FogDisplayMode mode, Color fog, Color border, boolean showLandAreaWhileSailing) {
+		return mode.showsFog() && (fog.getAlpha() > 0 || showLandAreaWhileSailing) || mode.showsBorder() && (border.getAlpha() > 0 || showLandAreaWhileSailing);
+	}
+	static boolean hasVisibleFadingWorld(FadingPlayerMode mode, Color colour, boolean showNames) { return mode.showsWorld() && (colour.getAlpha() > 0 || showNames); }
+	static boolean hasVisibleFadingMinimap(FadingPlayerMode mode, Color colour) { return mode.showsMinimap() && colour.getAlpha() > 0; }
+	private boolean isGloballyEnabled(boolean sailing) {
 		if (config.onlyInWilderness() && clientState.isNotInWilderness()) return false;
-		if (config.disableWhileSailing() && sailing) return false;
-		return !areaExclusionManager.isPlayerInExcludedArea();
+		return !config.disableWhileSailing() || !sailing;
 	}
 	private final class ToggleSpec {
 		private final Overlay overlay;
 		private final Predicate<ComponentState> activeFn;
+		private final Runnable onDisable;
 		private boolean enabled;
-		private ToggleSpec(Overlay overlay, Predicate<ComponentState> activeFn) {
+		private ToggleSpec(Overlay overlay, Predicate<ComponentState> activeFn) { this(overlay, activeFn, null); }
+		private ToggleSpec(Overlay overlay, Predicate<ComponentState> activeFn, Runnable onDisable) {
 			this.overlay = overlay;
 			this.activeFn = activeFn;
+			this.onDisable = onDisable;
 		}
 		private void update(ComponentState state) { set(activeFn.test(state)); }
 		private void disable() { set(false); }
 		private void set(boolean enabled) {
 			if (this.enabled == enabled) return;
 			if (enabled) overlayManager.add(overlay);
-			else overlayManager.remove(overlay);
+			else {
+				overlayManager.remove(overlay);
+				if (onDisable != null) onDisable.run();
+			}
 			this.enabled = enabled;
 		}
 	}
@@ -181,6 +224,7 @@ public class FogOfWarPlugin extends Plugin {
 		private void stop() { component.stop(); }
 	}
 	private static final class ComponentState {
+		private static final ComponentState INACTIVE = new ComponentState(false, false, false, false, false, false, false, false, false);
 		private final boolean worldActive;
 		private final boolean minimapActive;
 		private final boolean debugActive;
@@ -189,8 +233,8 @@ public class FogOfWarPlugin extends Plugin {
 		private final boolean fadingActive;
 		private final boolean overlayActive;
 		private final boolean visibleActorTrackingActive;
-		private final boolean anyConfigured;
-		private ComponentState(boolean worldActive, boolean minimapActive, boolean debugActive, boolean fadingWorldActive, boolean fadingMinimapActive, boolean fadingActive, boolean overlayActive, boolean visibleActorTrackingActive, boolean anyConfigured) {
+		private final boolean areaExclusionActive;
+		private ComponentState(boolean worldActive, boolean minimapActive, boolean debugActive, boolean fadingWorldActive, boolean fadingMinimapActive, boolean fadingActive, boolean overlayActive, boolean visibleActorTrackingActive, boolean areaExclusionActive) {
 			this.worldActive = worldActive;
 			this.minimapActive = minimapActive;
 			this.debugActive = debugActive;
@@ -199,13 +243,12 @@ public class FogOfWarPlugin extends Plugin {
 			this.fadingActive = fadingActive;
 			this.overlayActive = overlayActive;
 			this.visibleActorTrackingActive = visibleActorTrackingActive;
-			this.anyConfigured = anyConfigured;
+			this.areaExclusionActive = areaExclusionActive;
 		}
 	}
 	@Provides
 	@SuppressWarnings("unused")
 	FogOfWarConfig provideConfig(ConfigManager configManager) {
-		FogOfWarConfigMigration.migrate(configManager);
 		return configManager.getConfig(FogOfWarConfig.class);
 	}
 }

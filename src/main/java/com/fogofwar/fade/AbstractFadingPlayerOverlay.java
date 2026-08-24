@@ -4,13 +4,14 @@ import com.fogofwar.render.RenderCenter;
 import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
 import net.runelite.api.Client;
+import net.runelite.api.Player;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
-import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import java.awt.Dimension;
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.util.Collection;
 abstract class AbstractFadingPlayerOverlay extends Overlay {
@@ -31,24 +32,27 @@ abstract class AbstractFadingPlayerOverlay extends Overlay {
 	}
 	@Override
 	public Dimension render(Graphics2D graphics) {
-		if (!showsMarker() || clientState.isClientNotReady()) return null;
+		if (!showsMarker()) return null;
+		Player localPlayer = clientState.getLocalPlayerIfReady();
+		if (localPlayer == null) return null;
 		Collection<FadingPlayer> fadingPlayers = manager.getFadingPlayers().values();
 		if (fadingPlayers.isEmpty()) return null;
-		RenderCenter rc = renderCenterProvider.get();
+		RenderCenter rc = renderCenterProvider.get(localPlayer);
 		if (rc == null) return null;
 		WorldView wv = rc.getWorldView();
 		return renderPlayers(graphics, wv, fadingPlayers);
 	}
 	Dimension renderPlayers(Graphics2D graphics, WorldView wv, Collection<FadingPlayer> fadingPlayers) {
-		for (FadingPlayer fadingPlayer : fadingPlayers) renderPlayer(graphics, wv, fadingPlayer);
+		Color base = config.fadeMarkerColour();
+		int duration = config.fadeDurationTicks();
+		for (FadingPlayer fadingPlayer : fadingPlayers) renderPlayer(graphics, wv, fadingPlayer, base, duration);
 		return null;
 	}
-	private void renderPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer) {
-		WorldPoint wp = fadingPlayer.getMarkerLocation();
-		LocalPoint lp = LocalPoint.fromWorld(wv, wp);
+	private void renderPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer, Color base, int duration) {
+		LocalPoint lp = fadingPlayer.getLocalPoint(wv);
 		if (lp == null) return;
-		renderPlayer(graphics, wv, lp, fadingPlayer);
+		renderPlayer(graphics, wv, lp, fadingPlayer, base, duration);
 	}
 	abstract boolean showsMarker();
-	abstract void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer);
+	abstract void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration);
 }

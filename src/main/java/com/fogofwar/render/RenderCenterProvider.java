@@ -1,11 +1,9 @@
 package com.fogofwar.render;
 import com.fogofwar.lifecycle.LifecycleComponent;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
 import net.runelite.api.Player;
 import net.runelite.api.WorldView;
 import net.runelite.api.events.BeforeRender;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.WorldViewLoaded;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
@@ -22,21 +20,21 @@ public class RenderCenterProvider extends LifecycleComponent {
 		super(eventBus);
 		this.client = client;
 	}
-	public RenderCenter get() {
+	public RenderCenter get(Player player) {
 		if (!resolved) {
-			current = RenderCenter.resolve(client, getTopLevelWorldView());
+			current = RenderCenter.resolve(player, getTopLevelWorldView(player));
 			resolved = true;
 		}
 		return current;
 	}
-	public WorldView getTopLevelWorldView() {
-		Player player = client.getLocalPlayer();
+	public WorldView getTopLevelWorldView(Player player) {
 		WorldView worldView = player != null ? player.getWorldView() : null;
 		if (worldView != null && worldView.isTopLevel()) topWorldView = worldView;
 		else if (topWorldView == null) topWorldView = client.getTopLevelWorldView();
 		return topWorldView;
 	}
 	private void clear() {
+		if (!resolved) return;
 		current = null;
 		resolved = false;
 	}
@@ -49,11 +47,6 @@ public class RenderCenterProvider extends LifecycleComponent {
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onBeforeRender(BeforeRender event) { clear(); }
-	@Subscribe
-	@SuppressWarnings("unused")
-	public void onGameStateChanged(GameStateChanged event) {
-		if (event.getGameState() != GameState.LOGGED_IN) clearAll();
-	}
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onWorldViewLoaded(WorldViewLoaded event) {

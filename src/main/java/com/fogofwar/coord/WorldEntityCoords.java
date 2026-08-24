@@ -30,7 +30,6 @@ public final class WorldEntityCoords {
 		WorldEntityConfig config = worldEntity != null ? worldEntity.getConfig() : null;
 		return config != null && config.getCategory() == SHIP_ENTITY_CATEGORY;
 	}
-	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView topWorldView) { return resolveTopLevel(actor, null, topWorldView, null); }
 	public static ResolvedPoint resolveTopLevel(Actor actor, WorldView sourceWorldView, WorldView topWorldView, WorldEntity worldEntity) {
 		if (actor == null || topWorldView == null) return null;
 		if (sourceWorldView == null) sourceWorldView = actor.getWorldView();
@@ -51,8 +50,19 @@ public final class WorldEntityCoords {
 		return topWorldPoint != null ? new ResolvedPoint(topWorldPoint, topLocalPoint) : null;
 	}
 	public static WorldPoint playerToTopLevel(Player player, WorldView sourceWorldView, WorldView topWorldView) {
-		ResolvedPoint point = resolveTopLevel(player, sourceWorldView, topWorldView, null);
-		return point != null ? point.worldPoint : null;
+		if (player == null || topWorldView == null) return null;
+		if (sourceWorldView == null) sourceWorldView = player.getWorldView();
+		if (sourceWorldView == null) return null;
+		WorldPoint worldPoint = player.getWorldLocation();
+		LocalPoint localPoint = player.getLocalLocation();
+		if (sourceWorldView.isTopLevel()) {
+			if (worldPoint == null) return null;
+			return localPoint != null || LocalPoint.fromWorld(topWorldView, worldPoint) != null ? worldPoint : null;
+		}
+		WorldEntity worldEntity = getWorldEntity(sourceWorldView, topWorldView);
+		if (worldEntity == null) return null;
+		if (localPoint == null && worldPoint != null) localPoint = LocalPoint.fromWorld(sourceWorldView, worldPoint);
+		return localPoint != null ? toTopLevelWorldPoint(topWorldView, worldEntity.transformToMainWorld(localPoint)) : null;
 	}
 	public static final class ResolvedPoint {
 		public final WorldPoint worldPoint;

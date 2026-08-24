@@ -24,6 +24,7 @@ public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 		super(client, config, manager, clientState, renderCenterProvider, OverlayLayer.ABOVE_WIDGETS);
 		this.clipProvider = clipProvider;
 	}
+	public void clearCaches() { clipProvider.clearCaches(); }
 	@Override
 	boolean showsMarker() { return config.playerFadeMarkerMode().showsMinimap(); }
 	@Override
@@ -31,17 +32,18 @@ public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 		Widget minimapWidget = clipProvider.getMinimapWidget();
 		if (minimapWidget == null || minimapWidget.isHidden()) return null;
 		Shape oldClip = graphics.getClip();
-		graphics.setClip(clipProvider.getClipShape(minimapWidget));
+		graphics.clip(clipProvider.getClipShape(minimapWidget));
 		try {
 			return super.renderPlayers(graphics, wv, fadingPlayers);
 		} finally { graphics.setClip(oldClip); }
 	}
 	@Override
-	void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer) {
+	void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration) {
+		Color color = fadingPlayer.getColor(base, duration);
+		if (color.getAlpha() == 0) return;
 		Point mp = Perspective.localToMinimap(client, lp);
 		if (mp == null) return;
-		Color color = fadingPlayer.getColor(config);
-		Color shadedColor = fadingPlayer.getDarkerColor(config);
+		Color shadedColor = fadingPlayer.getDarkerColor(base, duration);
 		int x = mp.getX() - DOT_SIZE / 2;
 		int y = mp.getY() - DOT_SIZE / 2 + 1;
 		graphics.setColor(shadedColor);
