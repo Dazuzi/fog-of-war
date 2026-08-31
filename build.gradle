@@ -33,6 +33,7 @@ group = 'com.fogofwar'
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release.set(11)
+	options.compilerArgs.addAll(['-Xlint:all,-classfile,-processing', '-Werror'])
 }
 tasks.register('run', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath

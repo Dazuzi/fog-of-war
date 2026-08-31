@@ -19,7 +19,7 @@ import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.geom.GeneralPath;
-public class WorldFogOverlay extends Overlay {
+public final class WorldFogOverlay extends Overlay {
 	private final Client client;
 	private final FogOfWarConfig config;
 	private final ClientState clientState;

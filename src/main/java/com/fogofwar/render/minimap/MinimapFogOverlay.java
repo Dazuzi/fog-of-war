@@ -18,7 +18,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.GeneralPath;
-public class MinimapFogOverlay extends Overlay {
+public final class MinimapFogOverlay extends Overlay {
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final RenderCenterProvider renderCenterProvider;

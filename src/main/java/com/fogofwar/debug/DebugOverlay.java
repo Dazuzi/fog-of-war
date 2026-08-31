@@ -13,7 +13,7 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 import javax.inject.Inject;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
-public class DebugOverlay extends OverlayPanel {
+public final class DebugOverlay extends OverlayPanel {
 	private final FogOfWarConfig config;
 	private final ClientState clientState;
 	private final RenderCenterProvider renderCenterProvider;
