@@ -5,30 +5,37 @@ import java.awt.*;
 public interface FogOfWarConfig extends Config {
 	String CONFIG_GROUP = "fogofwar";
 	@ConfigItem(
+			keyName = "disableDuringCutscenes",
+			name = "Disable during cutscenes",
+			description = "Suspend all plugin overlays and tracking during cutscenes.",
+			position = 0
+	)
+	default boolean disableDuringCutscenes() { return true; }
+	@ConfigItem(
 			keyName = "onlyInWilderness",
 			name = "Only in Wilderness",
 			description = "Hide all plugin overlays outside the Wilderness.",
-			position = 0
+			position = 1
 	)
 	default boolean onlyInWilderness() { return false; }
 	@ConfigItem(
 			keyName = "disableWhileSailing",
 			name = "Disable while Sailing",
 			description = "Hide world, minimap, and fading overlays while Sailing.",
-			position = 1
+			position = 2
 	)
 	default boolean disableWhileSailing() { return false; }
 	@ConfigItem(
 			keyName = "showLandAreaWhileSailing",
 			name = "Show land area while Sailing",
 			description = "Show the smaller land actor render area while Sailing.",
-			position = 2
+			position = 3
 	)
 	default boolean showLandAreaWhileSailing() { return false; }
 	@ConfigSection(
 			name = "World",
 			description = "Settings for the world overlay",
-			position = 3
+			position = 4
 	)
 	String worldSection = "worldSection";
 	@ConfigItem(
@@ -77,7 +84,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigSection(
 			name = "Minimap",
 			description = "Settings for the minimap overlay",
-			position = 4
+			position = 5
 	)
 	String minimapSection = "minimapSection";
 	@ConfigItem(
@@ -118,7 +125,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigSection(
 			name = "Fading Players",
 			description = "Settings for marking players that leave render distance",
-			position = 5
+			position = 6
 	)
 	String fadingPlayerSection = "fadingPlayerSection";
 	@ConfigItem(
@@ -174,7 +181,7 @@ public interface FogOfWarConfig extends Config {
 	@ConfigSection(
 			name = "Tweaks",
 			description = "Advanced settings for experimental features.",
-			position = 6,
+			position = 7,
 			closedByDefault = true
 	)
 	String tweaksSection = "tweaksSection";

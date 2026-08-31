@@ -115,6 +115,10 @@ public class FogOfWarPlugin extends Plugin {
 	public void onVarbitChanged(VarbitChanged event) {
 		if (!started) return;
 		int id = event.getVarbitId();
+		if (id == VarbitID.CUTSCENE_STATUS) {
+			if (config.disableDuringCutscenes()) updateComponents();
+			return;
+		}
 		if (id == VarbitID.SAILING_BOARDED_BOAT) {
 			if (sailingUpdatesActive) updateComponents(event.getValue() == 1);
 			return;
@@ -147,7 +151,7 @@ public class FogOfWarPlugin extends Plugin {
 		});
 	}
 	private ComponentState createComponentState(boolean sailing) {
-		if (!clientState.isLoggedIn()) return ComponentState.INACTIVE;
+		if (!clientState.isLoggedIn() || clientState.isCutsceneSuppressed()) return ComponentState.INACTIVE;
 		FogDisplayMode worldMode = config.worldDisplayMode();
 		FogDisplayMode minimapMode = config.minimapDisplayMode();
 		FadingPlayerMode fadingPlayerMode = config.playerFadeMarkerMode();

@@ -1,6 +1,7 @@
 package com.fogofwar;
 import com.fogofwar.config.FadingPlayerMode;
 import com.fogofwar.config.FogDisplayMode;
+import com.fogofwar.config.FogOfWarConfig;
 import org.junit.Test;
 import java.awt.Color;
 import static org.junit.Assert.assertFalse;
@@ -8,6 +9,8 @@ import static org.junit.Assert.assertTrue;
 public class FogOfWarPluginTest {
 	private static final Color TRANSPARENT = new Color(0, 0, 0, 0);
 	private static final Color VISIBLE = new Color(0, 0, 0, 1);
+	@Test
+	public void cutsceneSuppressionIsEnabledByDefault() { assertTrue(new FogOfWarConfig() {}.disableDuringCutscenes()); }
 	@Test
 	public void transparentFogAndBordersRemainActiveOnlyForVisibleSailingDetail() {
 		assertFalse(FogOfWarPlugin.hasVisibleFogOrBorder(FogDisplayMode.FOG, TRANSPARENT, VISIBLE, false));
