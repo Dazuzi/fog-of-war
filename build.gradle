@@ -1,5 +1,8 @@
+import de.thetaphi.forbiddenapis.gradle.CheckForbiddenApis
 plugins {
     id 'java'
+	id 'pmd'
+	id 'de.thetaphi.forbiddenapis' version '3.10'
 }
 
 repositories {
@@ -18,22 +21,48 @@ def pluginMainClass = 'com.fogofwar.FogOfWarPlugin'
 def runMainClass = 'com.fogofwar.FogOfWar'
 
 dependencies {
-    compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
+	compileOnly "net.runelite:client:$runeLiteVersion"
+	compileOnly 'org.jetbrains:annotations:23.0.0'
+	testCompileOnly 'org.jetbrains:annotations:23.0.0'
 
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
     testImplementation 'junit:junit:4.13.1'
-    testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
-    testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
+	testImplementation "net.runelite:client:$runeLiteVersion"
+	testImplementation "net.runelite:jshell:$runeLiteVersion"
 }
 
 group = 'com.fogofwar'
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(11)
+}
+pmd {
+	toolVersion = '7.27.0'
+	ruleSets = []
+	ruleSetFiles = files('config/pmd/ruleset.xml')
+	consoleOutput = true
+}
+tasks.withType(Pmd).configureEach {
+	javaLauncher = javaToolchains.launcherFor(java.toolchain)
+	classpath += files(javaLauncher.map { it.metadata.installationPath.file('lib/jrt-fs.jar') })
+}
+tasks.named('pmdMain', Pmd) {
+	ruleSetFiles += files('config/pmd/runelite.xml')
+}
+tasks.withType(CheckForbiddenApis).configureEach {
+	enabled = name == 'forbiddenApisMain'
+	signaturesFiles = files('config/forbidden-apis/runelite.txt')
+	failOnUnsupportedJava = true
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release.set(11)
-	options.compilerArgs.addAll(['-Xlint:all,-classfile,-processing', '-Werror'])
+	options.compilerArgs.addAll(['-Xlint:all,-processing', '-Werror'])
+}
+tasks.withType(JavaExec).configureEach {
+	javaLauncher = javaToolchains.launcherFor(java.toolchain)
 }
 tasks.register('run', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
