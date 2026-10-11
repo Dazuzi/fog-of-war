@@ -2,7 +2,6 @@ package com.fogofwar.render.world;
 import com.fogofwar.coord.WorldEntityCoords;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
-import net.runelite.api.Model;
 import net.runelite.api.Perspective;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
@@ -10,7 +9,6 @@ import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
-import net.runelite.api.model.Jarvis;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Area;
@@ -98,19 +96,16 @@ final class ActorCutoutMask {
 	}
 	private void updateCameraState() {
 		lastGpu = client.isGpu();
-		if (lastGpu) {
-			lastCamFpX = client.getCameraFpX();
-			lastCamFpY = client.getCameraFpY();
-			lastCamFpZ = client.getCameraFpZ();
-			lastCamFpPitch = client.getCameraFpPitch();
-			lastCamFpYaw = client.getCameraFpYaw();
-		} else {
-			lastCamX = client.getCameraX();
-			lastCamY = client.getCameraY();
-			lastCamZ = client.getCameraZ();
-			lastCamPitch = client.getCameraPitch();
-			lastCamYaw = client.getCameraYaw();
-		}
+		lastCamX = client.getCameraX();
+		lastCamY = client.getCameraY();
+		lastCamZ = client.getCameraZ();
+		lastCamPitch = client.getCameraPitch();
+		lastCamYaw = client.getCameraYaw();
+		lastCamFpX = client.getCameraFpX();
+		lastCamFpY = client.getCameraFpY();
+		lastCamFpZ = client.getCameraFpZ();
+		lastCamFpPitch = client.getCameraFpPitch();
+		lastCamFpYaw = client.getCameraFpYaw();
 		lastScale = client.getScale();
 		lastVpX = viewport.x;
 		lastVpY = viewport.y;
@@ -173,20 +168,18 @@ final class ActorCutoutMask {
 		int anim = actor.getAnimation(), frame = actor.getAnimationFrame();
 		int pose = actor.getPoseAnimation(), poseFrame = actor.getPoseAnimationFrame();
 		int orientation = actor.getCurrentOrientation();
-		boolean match = cached != null
+		boolean hit = cached != null
 				&& cached.wx == worldX && cached.wy == worldY && cached.plane == worldPlane
 				&& cached.localX == lp.getX() && cached.localY == lp.getY()
 				&& cached.anim == anim && cached.frame == frame
 				&& cached.pose == pose && cached.poseFrame == poseFrame
 				&& cached.orientation == orientation
 				&& cached.gpu == lastGpu
-				&& (lastGpu
-						? Float.compare(cached.camFpX, lastCamFpX) == 0 && Float.compare(cached.camFpY, lastCamFpY) == 0 && Float.compare(cached.camFpZ, lastCamFpZ) == 0 && Float.compare(cached.camFpPitch, lastCamFpPitch) == 0 && Float.compare(cached.camFpYaw, lastCamFpYaw) == 0
-						: cached.camX == lastCamX && cached.camY == lastCamY && cached.camZ == lastCamZ && cached.camPitch == lastCamPitch && cached.camYaw == lastCamYaw)
+				&& cached.camX == lastCamX && cached.camY == lastCamY && cached.camZ == lastCamZ && cached.camPitch == lastCamPitch && cached.camYaw == lastCamYaw
+				&& Float.compare(cached.camFpX, lastCamFpX) == 0 && Float.compare(cached.camFpY, lastCamFpY) == 0 && Float.compare(cached.camFpZ, lastCamFpZ) == 0 && Float.compare(cached.camFpPitch, lastCamFpPitch) == 0 && Float.compare(cached.camFpYaw, lastCamFpYaw) == 0
 				&& cached.scale == lastScale
 				&& cached.vpX == lastVpX && cached.vpY == lastVpY && cached.vpW == lastVpW && cached.vpH == lastVpH;
-		if (match && isOutsideFog(fog, cached.bounds)) return;
-		boolean hit = match && cached.hull != null;
+		if (hit && isOutsideFog(fog, cached.bounds)) return;
 		int localX, localY, canvasX, canvasY, edgeDistance;
 		if (hit) {
 			localX = cached.localX;
@@ -278,44 +271,19 @@ final class ActorCutoutMask {
 	}
 	private Shape getCandidateHull(ActorCutoutCandidate candidate, Shape fog) {
 		if (candidate.hit) return candidate.cached.hull;
-		Actor actor = candidate.actor;
-		Model model = actor.getModel();
-		LocalPoint lp = actor.getLocalLocation();
-		if (model == null || lp == null) {
-			hullCache.remove(actor);
+		Shape hull = candidate.actor.getConvexHull();
+		if (hull == null) {
+			hullCache.remove(candidate.actor);
 			return null;
 		}
-		WorldView actorWv = actor.getWorldView();
-		int vertexCount = model.getVerticesCount();
-		int[] xs = new int[vertexCount], ys = new int[vertexCount];
-		Perspective.modelToCanvas(client, actorWv, vertexCount, lp.getX(), lp.getY(), Perspective.getFootprintTileHeight(client, lp, actorWv.getPlane(), actor.getFootprintSize()) - actor.getAnimationHeightOffset(), actor.getCurrentOrientation(), model.getVerticesX(), model.getVerticesZ(), model.getVerticesY(), xs, ys);
-		Rectangle bounds = getCanvasBounds(xs, ys);
-		if (bounds == null) {
-			hullCache.remove(actor);
-			return null;
-		}
-		cache(candidate, bounds);
-		if (isOutsideFog(fog, bounds)) return null;
-		Shape hull = Jarvis.convexHull(xs, ys);
-		candidate.cached.hull = hull;
-		return hull;
+		Rectangle bounds = hull.getBounds();
+		cache(candidate, hull, bounds);
+		return isOutsideFog(fog, bounds) ? null : hull;
 	}
-	private static Rectangle getCanvasBounds(int[] xs, int[] ys) {
-		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-		for (int i = 0; i < xs.length; i++) {
-			int x = xs[i], y = ys[i];
-			if (x == Integer.MIN_VALUE) continue;
-			if (x < minX) minX = x;
-			if (x > maxX) maxX = x;
-			if (y < minY) minY = y;
-			if (y > maxY) maxY = y;
-		}
-		return maxX < minX ? null : new Rectangle(minX, minY, maxX - minX, maxY - minY);
-	}
-	private void cache(ActorCutoutCandidate candidate, Rectangle bounds) {
+	private void cache(ActorCutoutCandidate candidate, Shape hull, Rectangle bounds) {
 		ActorHullCache.Entry cached = hullCache.getOrCreate(candidate.actor);
 		candidate.cached = cached;
-		cached.hull = null;
+		cached.hull = hull;
 		cached.bounds = bounds;
 		cached.wx = candidate.worldX;
 		cached.wy = candidate.worldY;
