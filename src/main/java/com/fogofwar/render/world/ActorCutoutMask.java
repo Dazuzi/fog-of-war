@@ -2,6 +2,7 @@ package com.fogofwar.render.world;
 import com.fogofwar.coord.WorldEntityCoords;
 import net.runelite.api.Actor;
 import net.runelite.api.Client;
+import net.runelite.api.Model;
 import net.runelite.api.Perspective;
 import net.runelite.api.Player;
 import net.runelite.api.Point;
@@ -9,6 +10,7 @@ import net.runelite.api.WorldEntity;
 import net.runelite.api.WorldView;
 import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.model.Jarvis;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Area;
@@ -160,7 +162,7 @@ final class ActorCutoutMask {
 		int anim = actor.getAnimation(), frame = actor.getAnimationFrame();
 		int pose = actor.getPoseAnimation(), poseFrame = actor.getPoseAnimationFrame();
 		int orientation = actor.getCurrentOrientation();
-		boolean hit = cached != null
+		boolean match = cached != null
 				&& cached.wx == worldX && cached.wy == worldY && cached.plane == worldPlane
 				&& cached.localX == lp.getX() && cached.localY == lp.getY()
 				&& cached.anim == anim && cached.frame == frame
@@ -172,13 +174,14 @@ final class ActorCutoutMask {
 						: cached.camX == lastCamX && cached.camY == lastCamY && cached.camZ == lastCamZ && cached.camPitch == lastCamPitch && cached.camYaw == lastCamYaw)
 				&& cached.scale == lastScale
 				&& cached.vpX == lastVpX && cached.vpY == lastVpY && cached.vpW == lastVpW && cached.vpH == lastVpH;
-		if (hit) {
+		if (match) {
 			if (!viewport.intersects(cached.bounds)) return;
 			if (!priority) {
 				boolean inside = boundary.contains(cached.bounds);
 				if (inside) return;
 			}
 		}
+		boolean hit = match && cached.hull != null;
 		int localX, localY, canvasX, canvasY, edgeDistance;
 		if (hit) {
 			localX = cached.localX;
@@ -236,12 +239,12 @@ final class ActorCutoutMask {
 		for (int pass = 0; pass < 2 && selected < limit; pass++) {
 			for (int i = 0; i < exclusionCandidateCount && selected < limit; i++) {
 				ActorCutoutCandidate candidate = exclusionCandidates.get(i);
-				if (candidate.selected) continue;
+				if (candidate.resolved) continue;
 				if (pass == 0 && candidate.bucket < 0) continue;
 				if (pass == 0 && usedBuckets[candidate.bucket]) continue;
+				candidate.resolved = true;
 				Area entryArea = getCandidateArea(candidate, boundary);
 				if (entryArea == null) continue;
-				candidate.selected = true;
 				if (candidate.bucket >= 0) usedBuckets[candidate.bucket] = true;
 				fogArea.subtract(entryArea);
 				selected++;
@@ -253,9 +256,9 @@ final class ActorCutoutMask {
 		for (int i = 0; i < exclusionCandidateCount && selected < limit; i++) {
 			ActorCutoutCandidate candidate = exclusionCandidates.get(i);
 			if (candidate.actor != localPlayer) continue;
+			candidate.resolved = true;
 			Area entryArea = getCandidateArea(candidate, boundary);
 			if (entryArea != null) {
-				candidate.selected = true;
 				fogArea.subtract(entryArea);
 				selected++;
 			}
@@ -276,26 +279,49 @@ final class ActorCutoutMask {
 		return cached.area;
 	}
 	private Shape getCandidateHull(ActorCutoutCandidate candidate, GeneralPath boundary) {
-		ActorHullCache.Entry cached = candidate.cached;
-		if (candidate.hit) return cached.hull;
-		Shape hull = candidate.actor.getConvexHull();
-		if (hull == null) {
-			if (cached != null) hullCache.remove(candidate.actor);
+		if (candidate.hit) return candidate.cached.hull;
+		Actor actor = candidate.actor;
+		Model model = actor.getModel();
+		LocalPoint lp = actor.getLocalLocation();
+		if (model == null || lp == null) {
+			hullCache.remove(actor);
 			return null;
 		}
-		Rectangle bounds = hull.getBounds();
-		cache(candidate, hull, bounds);
+		WorldView actorWv = actor.getWorldView();
+		int vertexCount = model.getVerticesCount();
+		int[] xs = new int[vertexCount], ys = new int[vertexCount];
+		Perspective.modelToCanvas(client, actorWv, vertexCount, lp.getX(), lp.getY(), Perspective.getFootprintTileHeight(client, lp, actorWv.getPlane(), actor.getFootprintSize()) - actor.getAnimationHeightOffset(), actor.getCurrentOrientation(), model.getVerticesX(), model.getVerticesZ(), model.getVerticesY(), xs, ys);
+		Rectangle bounds = getCanvasBounds(xs, ys);
+		if (bounds == null) {
+			hullCache.remove(actor);
+			return null;
+		}
+		cache(candidate, bounds);
 		if (!viewport.intersects(bounds)) return null;
-		if (candidate.actor != localPlayer) {
+		if (actor != localPlayer) {
 			boolean inside = boundary.contains(bounds);
 			if (inside) return null;
 		}
+		Shape hull = Jarvis.convexHull(xs, ys);
+		candidate.cached.hull = hull;
 		return hull;
 	}
-	private void cache(ActorCutoutCandidate candidate, Shape hull, Rectangle bounds) {
+	private static Rectangle getCanvasBounds(int[] xs, int[] ys) {
+		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+		for (int i = 0; i < xs.length; i++) {
+			int x = xs[i], y = ys[i];
+			if (x == Integer.MIN_VALUE) continue;
+			if (x < minX) minX = x;
+			if (x > maxX) maxX = x;
+			if (y < minY) minY = y;
+			if (y > maxY) maxY = y;
+		}
+		return maxX < minX ? null : new Rectangle(minX, minY, maxX - minX, maxY - minY);
+	}
+	private void cache(ActorCutoutCandidate candidate, Rectangle bounds) {
 		ActorHullCache.Entry cached = hullCache.getOrCreate(candidate.actor);
 		candidate.cached = cached;
-		cached.hull = hull;
+		cached.hull = null;
 		cached.bounds = bounds;
 		cached.area = null;
 		cached.wx = candidate.worldX;
@@ -331,7 +357,7 @@ final class ActorCutoutMask {
 		private Actor actor;
 		private ActorHullCache.Entry cached;
 		private int worldX, worldY, plane, anim, frame, pose, poseFrame, orientation, score, bucket, canvasX, canvasY, localX, localY;
-		private boolean hit, selected;
+		private boolean hit, resolved;
 		private void set(Actor actor, ActorHullCache.Entry cached, int worldX, int worldY, int plane, int anim, int frame, int pose, int poseFrame, int orientation, boolean hit, int canvasX, int canvasY, int localX, int localY) {
 			this.actor = actor;
 			this.cached = cached;
@@ -350,13 +376,13 @@ final class ActorCutoutMask {
 			this.canvasY = canvasY;
 			this.localX = localX;
 			this.localY = localY;
-			this.selected = false;
+			this.resolved = false;
 		}
 		private void clear() {
 			actor = null;
 			cached = null;
 			worldX = worldY = plane = anim = frame = pose = poseFrame = orientation = score = bucket = canvasX = canvasY = localX = localY = 0;
-			hit = selected = false;
+			hit = resolved = false;
 		}
 	}
 }
