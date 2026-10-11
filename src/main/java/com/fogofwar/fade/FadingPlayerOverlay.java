@@ -29,7 +29,7 @@ public class FadingPlayerOverlay extends AbstractFadingPlayerOverlay {
 		return super.renderPlayers(graphics, wv, fadingPlayers);
 	}
 	@Override
-	void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration) {
+	void renderPlayer(Graphics2D graphics, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration) {
 		Color color = fadingPlayer.getColor(base, duration);
 		if (color.getAlpha() == 0 && !showNames) return;
 		Polygon poly = Perspective.getCanvasTilePoly(client, lp);

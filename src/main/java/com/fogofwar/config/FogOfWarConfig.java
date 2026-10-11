@@ -2,6 +2,7 @@ package com.fogofwar.config;
 import net.runelite.client.config.*;
 import java.awt.*;
 @ConfigGroup(FogOfWarConfig.CONFIG_GROUP)
+@SuppressWarnings("SameReturnValue")
 public interface FogOfWarConfig extends Config {
 	String CONFIG_GROUP = "fogofwar";
 	@ConfigItem(

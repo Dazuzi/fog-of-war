@@ -81,6 +81,7 @@ public class AreaExclusionManager extends LifecycleComponent {
 		private final int maxX;
 		private final int maxY;
 		private final int planeMask;
+		@SuppressWarnings("SameParameterValue")
 		ExcludedArea(int minX, int minY, int maxX, int maxY, int... planes) {
 			this.minX = minX;
 			this.minY = minY;

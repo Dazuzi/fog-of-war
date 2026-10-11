@@ -38,7 +38,7 @@ public class FadingPlayerMinimapOverlay extends AbstractFadingPlayerOverlay {
 		} finally { graphics.setClip(oldClip); }
 	}
 	@Override
-	void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration) {
+	void renderPlayer(Graphics2D graphics, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration) {
 		Color color = fadingPlayer.getColor(base, duration);
 		if (color.getAlpha() == 0) return;
 		Point mp = Perspective.localToMinimap(client, lp);

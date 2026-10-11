@@ -51,8 +51,8 @@ abstract class AbstractFadingPlayerOverlay extends Overlay {
 	private void renderPlayer(Graphics2D graphics, WorldView wv, FadingPlayer fadingPlayer, Color base, int duration) {
 		LocalPoint lp = fadingPlayer.getLocalPoint(wv);
 		if (lp == null) return;
-		renderPlayer(graphics, wv, lp, fadingPlayer, base, duration);
+		renderPlayer(graphics, lp, fadingPlayer, base, duration);
 	}
 	abstract boolean showsMarker();
-	abstract void renderPlayer(Graphics2D graphics, WorldView wv, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration);
+	abstract void renderPlayer(Graphics2D graphics, LocalPoint lp, FadingPlayer fadingPlayer, Color base, int duration);
 }
