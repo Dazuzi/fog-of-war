@@ -2,7 +2,6 @@ package com.fogofwar.render.world;
 import com.fogofwar.config.ActorCutoutLimit;
 import com.fogofwar.config.FogDisplayMode;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.render.FogRender;
 import com.fogofwar.render.RenderCenter;
 import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
@@ -78,20 +77,18 @@ public final class WorldFogOverlay extends Overlay {
 		} else clearActorCaches();
 		try {
 			int borderThickness = showBorder || showSailingBorder ? config.worldBorderThickness() : 0;
-			Color sailingFogColour = showSailingFog ? FogRender.sailingSea(fogColour) : null;
-			Color sailingBorderColour = showSailingBorder ? FogRender.sailingSea(borderColour) : null;
-			renderFrame(graphics, showFog, showBorder, showSailingFog, showSailingBorder, rc, fogColour, borderColour, sailingFogColour, sailingBorderColour, borderThickness, cutoutLimit);
+			renderFrame(graphics, showFog, showBorder, showSailingFog, showSailingBorder, rc, fogColour, borderColour, borderThickness, cutoutLimit);
 		} finally {
 			if (useCutouts) actorCutouts.endFrame();
 		}
 		return null;
 	}
-	private void renderFrame(Graphics2D graphics, boolean showFog, boolean showBorder, boolean showSailingFog, boolean showSailingBorder, RenderCenter rc, Color fogColour, Color borderColour, Color sailingFogColour, Color sailingBorderColour, int borderThickness, ActorCutoutLimit cutoutLimit) {
+	private void renderFrame(Graphics2D graphics, boolean showFog, boolean showBorder, boolean showSailingFog, boolean showSailingBorder, RenderCenter rc, Color fogColour, Color borderColour, int borderThickness, ActorCutoutLimit cutoutLimit) {
 		WorldView worldView = rc.getWorldView();
 		int landRadius = config.landRenderDistance();
 		boolean sailing = rc.isOnWorldEntity();
 		int plane = rc.getWorldPoint().getPlane();
-		if (sailing) renderSailingFrame(graphics, showFog, showBorder, showSailingFog, showSailingBorder, rc, worldView, plane, landRadius, fogColour, borderColour, sailingFogColour, sailingBorderColour, borderThickness, cutoutLimit);
+		if (sailing) renderSailingFrame(graphics, showFog, showBorder, showSailingFog, showSailingBorder, rc, worldView, plane, landRadius, fogColour, borderColour, borderThickness, cutoutLimit);
 		else renderLandFrame(graphics, showFog, showBorder, rc, worldView, plane, landRadius, fogColour, borderColour, borderThickness, cutoutLimit);
 	}
 	private void renderLandFrame(Graphics2D graphics, boolean showFog, boolean showBorder, RenderCenter rc, WorldView worldView, int plane, int landRadius, Color fogColour, Color borderColour, int borderThickness, ActorCutoutLimit cutoutLimit) {
@@ -104,7 +101,7 @@ public final class WorldFogOverlay extends Overlay {
 		if (showFog) fogMask.renderFog(graphics, viewport, worldView, landBoundary, landCenter, plane, landRadius, fogColour, cutoutLimit, actorCutouts);
 		if (showBorder) fogMask.renderBorder(graphics, landBoundary, borderColour, borderThickness);
 	}
-	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, boolean showSailingFog, boolean showSailingBorder, RenderCenter rc, WorldView worldView, int plane, int landRadius, Color fogColour, Color borderColour, Color sailingFogColour, Color sailingBorderColour, int borderThickness, ActorCutoutLimit cutoutLimit) {
+	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, boolean showSailingFog, boolean showSailingBorder, RenderCenter rc, WorldView worldView, int plane, int landRadius, Color fogColour, Color borderColour, int borderThickness, ActorCutoutLimit cutoutLimit) {
 		int seaRadius = config.sailingRenderDistance();
 		LocalPoint center = rc.snappedCenter();
 		GeneralPath seaBoundary = renderBoundary.createSeaRenderAreaBoundary(rc, seaRadius, viewport);
@@ -114,9 +111,9 @@ public final class WorldFogOverlay extends Overlay {
 		}
 		GeneralPath landBoundary = showSailingFog || showSailingBorder ? renderBoundary.createLandRenderAreaBoundary(rc, landRadius, viewport) : null;
 		if (showFog) fogMask.renderFog(graphics, viewport, worldView, seaBoundary, center, plane, seaRadius, fogColour, cutoutLimit, actorCutouts);
-		if (showSailingFog && landBoundary != null) fogMask.renderSailingSeaFog(graphics, viewport, worldView, seaBoundary, landBoundary, center, plane, landRadius, sailingFogColour, cutoutLimit, actorCutouts);
+		if (showSailingFog && landBoundary != null) fogMask.renderSailingSeaFog(graphics, viewport, worldView, seaBoundary, landBoundary, center, plane, landRadius, fogColour, cutoutLimit, actorCutouts);
 		if (showBorder) fogMask.renderBorder(graphics, seaBoundary, borderColour, borderThickness);
-		if (showSailingBorder && landBoundary != null) fogMask.renderSailingSeaBorder(graphics, landBoundary, sailingBorderColour, borderThickness);
+		if (showSailingBorder && landBoundary != null) fogMask.renderSailingSeaBorder(graphics, landBoundary, borderColour, borderThickness);
 	}
 	private void setViewportBounds() {
 		viewport.setBounds(client.getViewportXOffset(), client.getViewportYOffset(), client.getViewportWidth(), client.getViewportHeight());

@@ -1,5 +1,6 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.render.FogRender;
+import com.fogofwar.render.FogRender.SailingSeaCache;
 import com.fogofwar.render.FogRender.StrokeCache;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -11,6 +12,8 @@ import java.awt.geom.Rectangle2D;
 final class MinimapFogMask {
 	private GeneralPath fogFillPath;
 	private StrokeCache borderStroke;
+	private SailingSeaCache sailingSeaFog;
+	private SailingSeaCache sailingSeaBorder;
 	void renderFog(Graphics2D graphics, Shape minimapClipShape, GeneralPath path, Color colour) {
 		Rectangle2D bounds = minimapClipShape.getBounds2D();
 		if (path.contains(bounds)) return;
@@ -32,12 +35,14 @@ final class MinimapFogMask {
 	void renderSailingSeaFog(Graphics2D graphics, GeneralPath boundary, GeneralPath innerBoundary, Color colour) {
 		Area area = FogRender.createDifferenceArea(boundary, innerBoundary);
 		if (area.isEmpty()) return;
-		graphics.setColor(colour);
+		if (sailingSeaFog == null) sailingSeaFog = new SailingSeaCache();
+		graphics.setColor(sailingSeaFog.get(colour));
 		graphics.fill(area);
 	}
 	void renderSailingSeaBorder(Graphics2D graphics, Shape minimapClipShape, GeneralPath path, Color colour, int thickness) {
 		if (path.contains(minimapClipShape.getBounds2D())) return;
 		if (borderStroke == null) borderStroke = new StrokeCache();
-		FogRender.drawBorder(graphics, path, colour, borderStroke, thickness);
+		if (sailingSeaBorder == null) sailingSeaBorder = new SailingSeaCache();
+		FogRender.drawBorder(graphics, path, sailingSeaBorder.get(colour), borderStroke, thickness);
 	}
 }

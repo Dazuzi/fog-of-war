@@ -9,10 +9,6 @@ import java.awt.geom.Area;
 import java.awt.geom.GeneralPath;
 public final class FogRender {
 	private static final int SAILING_SEA_ALPHA_FLOOR = 16;
-	private static final int SAILING_SEA_CACHE_SIZE = 16;
-	private static int[] sailingSeaKeys;
-	private static Color[] sailingSeaValues;
-	private static int sailingSeaNext;
 	private FogRender() {}
 	public static void fill(GeneralPath path, Rectangle bounds, int padding, GeneralPath inner) {
 		path.reset();
@@ -35,21 +31,16 @@ public final class FogRender {
 		area.subtract(new Area(innerBoundary));
 		return area;
 	}
-	public static Color sailingSea(Color colour) {
-		if (sailingSeaValues == null) {
-			sailingSeaKeys = new int[SAILING_SEA_CACHE_SIZE];
-			sailingSeaValues = new Color[SAILING_SEA_CACHE_SIZE];
+	public static final class SailingSeaCache {
+		private Color colour;
+		private Color sailingSea;
+		public Color get(Color c) {
+			if (!c.equals(colour)) {
+				sailingSea = new Color(c.getRed(), c.getGreen(), c.getBlue(), Math.max(SAILING_SEA_ALPHA_FLOOR, c.getAlpha() / 4));
+				colour = c;
+			}
+			return sailingSea;
 		}
-		int rgb = colour.getRGB();
-		for (int i = 0; i < sailingSeaValues.length; i++) {
-			Color cached = sailingSeaValues[i];
-			if (cached != null && sailingSeaKeys[i] == rgb) return cached;
-		}
-		Color sailingSea = new Color(colour.getRed(), colour.getGreen(), colour.getBlue(), Math.max(SAILING_SEA_ALPHA_FLOOR, colour.getAlpha() / 4));
-		sailingSeaKeys[sailingSeaNext] = rgb;
-		sailingSeaValues[sailingSeaNext] = sailingSea;
-		sailingSeaNext = (sailingSeaNext + 1) % SAILING_SEA_CACHE_SIZE;
-		return sailingSea;
 	}
 	public static final class StrokeCache {
 		private BasicStroke stroke;

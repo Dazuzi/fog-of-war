@@ -41,6 +41,7 @@ final class ActorCutoutMask {
 	private final Client client;
 	private final VisibleActorTracker visibleActorTracker;
 	private final ActorHullCache hullCache = new ActorHullCache();
+	private final GeneralPath exclusionPath = new GeneralPath();
 	private List<ActorCutoutCandidate> exclusionCandidates = EMPTY_CANDIDATES;
 	private boolean[] usedBuckets = new boolean[0];
 	private Rectangle viewport;
@@ -64,7 +65,7 @@ final class ActorCutoutMask {
 		if (prepared && retainHullCache) hullCache.retainSeen();
 		localPlayer = null;
 	}
-	void subtractExclusions(Area fogArea, Rectangle viewport, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius, int limit) {
+	Area createExclusionArea(Shape fog, Rectangle viewport, WorldView worldView, LocalPoint centerLp, int plane, int radius, int limit) {
 		this.viewport = viewport;
 		Set<Actor> visibleActors = visibleActorTracker.getVisibleActors();
 		int expectedActors = Math.max(16, Math.min(256, visibleActors.size() + 1));
@@ -73,15 +74,18 @@ final class ActorCutoutMask {
 		if (exclusionCandidates == EMPTY_CANDIDATES) exclusionCandidates = new ArrayList<>(expectedActors);
 		boolean all = limit == Integer.MAX_VALUE;
 		try {
-			collectExclusionCandidates(visibleActors, worldView, boundary, centerLp, plane, radius);
-			if (exclusionCandidateCount == 0) return;
-			if (all || exclusionCandidateCount <= limit) subtractAllExclusionAreas(fogArea, boundary);
+			collectExclusionCandidates(visibleActors, worldView, fog, centerLp, plane, radius);
+			if (exclusionCandidateCount == 0) return null;
+			exclusionPath.reset();
+			int selected;
+			if (all || exclusionCandidateCount <= limit) selected = appendAllExclusionHulls(fog);
 			else {
 				int bucketColumns = Math.max(1, (viewport.width + ACTOR_CUTOUT_BUCKET_SIZE - 1) / ACTOR_CUTOUT_BUCKET_SIZE);
 				rankExclusionCandidates(centerLp, radius * Perspective.LOCAL_TILE_SIZE + Perspective.LOCAL_HALF_TILE_SIZE, bucketColumns);
 				exclusionCandidates.subList(0, exclusionCandidateCount).sort(ACTOR_CUTOUT_CANDIDATE_ORDER);
-				subtractSelectedExclusionAreas(fogArea, boundary, limit, bucketColumns);
+				selected = appendSelectedExclusionHulls(fog, limit, bucketColumns);
 			}
+			return selected > 0 ? new Area(exclusionPath) : null;
 		} finally {
 			clearExclusionCandidates();
 		}
@@ -113,23 +117,30 @@ final class ActorCutoutMask {
 		lastVpW = viewport.width;
 		lastVpH = viewport.height;
 	}
-	private void subtractAllExclusionAreas(Area fogArea, GeneralPath boundary) {
+	private int appendAllExclusionHulls(Shape fog) {
+		int selected = 0;
 		for (int i = 0; i < exclusionCandidateCount; i++) {
-			Area entryArea = getCandidateArea(exclusionCandidates.get(i), boundary);
-			if (entryArea == null) continue;
-			fogArea.subtract(entryArea);
+			Shape hull = getCandidateHull(exclusionCandidates.get(i), fog);
+			if (hull == null) continue;
+			exclusionPath.append(hull, false);
+			selected++;
 		}
+		return selected;
 	}
-	private void collectExclusionCandidates(Set<Actor> visibleActors, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int radius) {
+	private boolean isOutsideFog(Shape fog, Rectangle bounds) {
+		int minX = Math.max(bounds.x, viewport.x), minY = Math.max(bounds.y, viewport.y);
+		return !fog.intersects(minX, minY, Math.min(bounds.x + bounds.width, viewport.x + viewport.width) - minX, Math.min(bounds.y + bounds.height, viewport.y + viewport.height) - minY);
+	}
+	private void collectExclusionCandidates(Set<Actor> visibleActors, WorldView worldView, Shape fog, LocalPoint centerLp, int plane, int radius) {
 		exclusionCandidateCount = 0;
 		int localRadius = radius * Perspective.LOCAL_TILE_SIZE + Perspective.LOCAL_HALF_TILE_SIZE;
-		if (localPlayer != null) collectExclusionCandidate(localPlayer, worldView, boundary, centerLp, plane, localRadius);
+		if (localPlayer != null) collectExclusionCandidate(localPlayer, worldView, fog, centerLp, plane, localRadius);
 		for (Actor actor : visibleActors) {
 			if (actor == localPlayer) continue;
-			collectExclusionCandidate(actor, worldView, boundary, centerLp, plane, localRadius);
+			collectExclusionCandidate(actor, worldView, fog, centerLp, plane, localRadius);
 		}
 	}
-	private void collectExclusionCandidate(Actor actor, WorldView worldView, GeneralPath boundary, LocalPoint centerLp, int plane, int localRadius) {
+	private void collectExclusionCandidate(Actor actor, WorldView worldView, Shape fog, LocalPoint centerLp, int plane, int localRadius) {
 		if (actor == null) return;
 		boolean priority = actor == localPlayer;
 		WorldView actorWv = actor.getWorldView();
@@ -174,13 +185,7 @@ final class ActorCutoutMask {
 						: cached.camX == lastCamX && cached.camY == lastCamY && cached.camZ == lastCamZ && cached.camPitch == lastCamPitch && cached.camYaw == lastCamYaw)
 				&& cached.scale == lastScale
 				&& cached.vpX == lastVpX && cached.vpY == lastVpY && cached.vpW == lastVpW && cached.vpH == lastVpH;
-		if (match) {
-			if (!viewport.intersects(cached.bounds)) return;
-			if (!priority) {
-				boolean inside = boundary.contains(cached.bounds);
-				if (inside) return;
-			}
-		}
+		if (match && isOutsideFog(fog, cached.bounds)) return;
 		boolean hit = match && cached.hull != null;
 		int localX, localY, canvasX, canvasY, edgeDistance;
 		if (hit) {
@@ -230,12 +235,12 @@ final class ActorCutoutMask {
 		if (exclusionCandidateCount == exclusionCandidates.size()) exclusionCandidates.add(new ActorCutoutCandidate());
 		exclusionCandidates.get(exclusionCandidateCount++).set(actor, cached, worldX, worldY, plane, anim, frame, pose, poseFrame, orientation, hit, canvasX, canvasY, localX, localY);
 	}
-	private void subtractSelectedExclusionAreas(Area fogArea, GeneralPath boundary, int limit, int bucketColumns) {
+	private int appendSelectedExclusionHulls(Shape fog, int limit, int bucketColumns) {
 		int bucketRows = Math.max(1, (viewport.height + ACTOR_CUTOUT_BUCKET_SIZE - 1) / ACTOR_CUTOUT_BUCKET_SIZE);
 		int bucketCount = bucketColumns * bucketRows;
 		if (usedBuckets.length < bucketCount) usedBuckets = new boolean[bucketCount];
 		else Arrays.fill(usedBuckets, 0, bucketCount, false);
-		int selected = subtractPriorityExclusionAreas(fogArea, boundary, limit);
+		int selected = appendPriorityExclusionHull(fog, limit);
 		for (int pass = 0; pass < 2 && selected < limit; pass++) {
 			for (int i = 0; i < exclusionCandidateCount && selected < limit; i++) {
 				ActorCutoutCandidate candidate = exclusionCandidates.get(i);
@@ -243,23 +248,24 @@ final class ActorCutoutMask {
 				if (pass == 0 && candidate.bucket < 0) continue;
 				if (pass == 0 && usedBuckets[candidate.bucket]) continue;
 				candidate.resolved = true;
-				Area entryArea = getCandidateArea(candidate, boundary);
-				if (entryArea == null) continue;
+				Shape hull = getCandidateHull(candidate, fog);
+				if (hull == null) continue;
 				if (candidate.bucket >= 0) usedBuckets[candidate.bucket] = true;
-				fogArea.subtract(entryArea);
+				exclusionPath.append(hull, false);
 				selected++;
 			}
 		}
+		return selected;
 	}
-	private int subtractPriorityExclusionAreas(Area fogArea, GeneralPath boundary, int limit) {
+	private int appendPriorityExclusionHull(Shape fog, int limit) {
 		int selected = 0;
 		for (int i = 0; i < exclusionCandidateCount && selected < limit; i++) {
 			ActorCutoutCandidate candidate = exclusionCandidates.get(i);
 			if (candidate.actor != localPlayer) continue;
 			candidate.resolved = true;
-			Area entryArea = getCandidateArea(candidate, boundary);
-			if (entryArea != null) {
-				fogArea.subtract(entryArea);
+			Shape hull = getCandidateHull(candidate, fog);
+			if (hull != null) {
+				exclusionPath.append(hull, false);
 				selected++;
 			}
 			break;
@@ -270,15 +276,7 @@ final class ActorCutoutMask {
 		for (int i = 0; i < exclusionCandidateCount; i++) exclusionCandidates.get(i).clear();
 		exclusionCandidateCount = 0;
 	}
-	private Area getCandidateArea(ActorCutoutCandidate candidate, GeneralPath boundary) {
-		Shape hull = getCandidateHull(candidate, boundary);
-		if (hull == null) return null;
-		ActorHullCache.Entry cached = candidate.cached;
-		if (cached == null) return null;
-		if (cached.area == null) cached.area = new Area(hull);
-		return cached.area;
-	}
-	private Shape getCandidateHull(ActorCutoutCandidate candidate, GeneralPath boundary) {
+	private Shape getCandidateHull(ActorCutoutCandidate candidate, Shape fog) {
 		if (candidate.hit) return candidate.cached.hull;
 		Actor actor = candidate.actor;
 		Model model = actor.getModel();
@@ -297,11 +295,7 @@ final class ActorCutoutMask {
 			return null;
 		}
 		cache(candidate, bounds);
-		if (!viewport.intersects(bounds)) return null;
-		if (actor != localPlayer) {
-			boolean inside = boundary.contains(bounds);
-			if (inside) return null;
-		}
+		if (isOutsideFog(fog, bounds)) return null;
 		Shape hull = Jarvis.convexHull(xs, ys);
 		candidate.cached.hull = hull;
 		return hull;
@@ -323,7 +317,6 @@ final class ActorCutoutMask {
 		candidate.cached = cached;
 		cached.hull = null;
 		cached.bounds = bounds;
-		cached.area = null;
 		cached.wx = candidate.worldX;
 		cached.wy = candidate.worldY;
 		cached.plane = candidate.plane;

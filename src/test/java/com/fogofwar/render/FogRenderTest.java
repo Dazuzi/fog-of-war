@@ -6,10 +6,11 @@ import static org.junit.Assert.assertSame;
 public class FogRenderTest {
 	@Test
 	public void sailingSeaColourRetainsVisibleAlphaFloorAndCachesResult() {
+		FogRender.SailingSeaCache cache = new FogRender.SailingSeaCache();
 		Color transparent = new Color(10, 20, 30, 0);
-		Color sailing = FogRender.sailingSea(transparent);
+		Color sailing = cache.get(transparent);
 		assertEquals(16, sailing.getAlpha());
-		assertSame(sailing, FogRender.sailingSea(transparent));
-		assertEquals(50, FogRender.sailingSea(new Color(10, 20, 30, 200)).getAlpha());
+		assertSame(sailing, cache.get(transparent));
+		assertEquals(50, cache.get(new Color(10, 20, 30, 200)).getAlpha());
 	}
 }

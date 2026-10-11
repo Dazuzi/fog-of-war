@@ -2,7 +2,6 @@ package com.fogofwar.render.world;
 import net.runelite.api.Actor;
 import java.awt.Rectangle;
 import java.awt.Shape;
-import java.awt.geom.Area;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -28,7 +27,6 @@ final class ActorHullCache {
 	void retainSeen() { if (entries != EMPTY_ENTRIES) entries.keySet().retainAll(seen); }
 	static final class Entry {
 		Shape hull;
-		Area area;
 		Rectangle bounds;
 		int wx, wy, plane, anim, frame, pose, poseFrame, orientation;
 		int localX, localY, canvasX, canvasY;

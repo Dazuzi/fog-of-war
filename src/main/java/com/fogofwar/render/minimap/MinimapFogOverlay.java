@@ -1,7 +1,6 @@
 package com.fogofwar.render.minimap;
 import com.fogofwar.config.FogDisplayMode;
 import com.fogofwar.config.FogOfWarConfig;
-import com.fogofwar.render.FogRender;
 import com.fogofwar.render.RenderCenter;
 import com.fogofwar.render.RenderCenterProvider;
 import com.fogofwar.state.ClientState;
@@ -73,9 +72,7 @@ public final class MinimapFogOverlay extends Overlay {
 		try {
 			int landRadius = config.landRenderDistance();
 			int borderThickness = showBorder || showSailingBorder ? config.minimapBorderThickness() : 0;
-			Color sailingFogColour = showSailingFog ? FogRender.sailingSea(fogColour) : null;
-			Color sailingBorderColour = showSailingBorder ? FogRender.sailingSea(borderColour) : null;
-			if (rc.isOnWorldEntity()) renderSailingFrame(graphics, showFog, showBorder, showSailingFog, showSailingBorder, rc, minimap, minimapBounds, minimapClipShape, landRadius, fogColour, borderColour, sailingFogColour, sailingBorderColour, borderThickness);
+			if (rc.isOnWorldEntity()) renderSailingFrame(graphics, showFog, showBorder, showSailingFog, showSailingBorder, rc, minimap, minimapBounds, minimapClipShape, landRadius, fogColour, borderColour, borderThickness);
 			else renderLandFrame(graphics, showFog, showBorder, rc, minimap, minimapBounds, minimapClipShape, landRadius, fogColour, borderColour, borderThickness);
 			return null;
 		} finally { graphics.setClip(oldClip); }
@@ -89,7 +86,7 @@ public final class MinimapFogOverlay extends Overlay {
 		if (showFog) fogMask.renderFog(graphics, minimapClipShape, landPath, fogColour);
 		if (showBorder) fogMask.renderBorder(graphics, minimapClipShape, landPath, borderColour, borderThickness);
 	}
-	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, boolean showSailingFog, boolean showSailingBorder, RenderCenter rc, Widget minimap, Rectangle minimapBounds, Shape minimapClipShape, int landRadius, Color fogColour, Color borderColour, Color sailingFogColour, Color sailingBorderColour, int borderThickness) {
+	private void renderSailingFrame(Graphics2D graphics, boolean showFog, boolean showBorder, boolean showSailingFog, boolean showSailingBorder, RenderCenter rc, Widget minimap, Rectangle minimapBounds, Shape minimapClipShape, int landRadius, Color fogColour, Color borderColour, int borderThickness) {
 		int seaRadius = config.sailingRenderDistance();
 		GeneralPath seaPath = renderBoundary.createSeaRenderAreaPath(rc, seaRadius, minimap, minimapBounds);
 		if (seaPath == null) {
@@ -98,8 +95,8 @@ public final class MinimapFogOverlay extends Overlay {
 		}
 		GeneralPath landPath = showSailingFog || showSailingBorder ? renderBoundary.createLandRenderAreaPath(rc, landRadius, minimap, minimapBounds) : null;
 		if (showFog) fogMask.renderFog(graphics, minimapClipShape, seaPath, fogColour);
-		if (showSailingFog && landPath != null) fogMask.renderSailingSeaFog(graphics, seaPath, landPath, sailingFogColour);
+		if (showSailingFog && landPath != null) fogMask.renderSailingSeaFog(graphics, seaPath, landPath, fogColour);
 		if (showBorder) fogMask.renderBorder(graphics, minimapClipShape, seaPath, borderColour, borderThickness);
-		if (showSailingBorder && landPath != null) fogMask.renderSailingSeaBorder(graphics, minimapClipShape, landPath, sailingBorderColour, borderThickness);
+		if (showSailingBorder && landPath != null) fogMask.renderSailingSeaBorder(graphics, minimapClipShape, landPath, borderColour, borderThickness);
 	}
 }

@@ -73,20 +73,15 @@ public class FogOfWarPlugin extends Plugin {
 	@Override
 	protected void startUp() {
 		started = true;
-		initComponents();
-		areaExclusionManager.setOnTransition(this::updateComponents);
 		updateComponentsOnClientThread();
 	}
 	@Override
 	protected void shutDown() {
-		areaExclusionManager.setOnTransition(null);
 		started = false;
-		sailingUpdatesActive = wildernessUpdatesActive = false;
-		for (ToggleSpec overlayToggle : overlayToggles) overlayToggle.disable();
-		areaExclusionManager.stop();
-		for (LifecycleSpec component : lifecycleComponents) component.stop();
+		updateComponentsOnClientThread();
 	}
 	private void initComponents() {
+		areaExclusionManager.setOnTransition(this::updateComponents);
 		overlayToggles = List.of(
 				new ToggleSpec(worldOverlay, state -> state.worldActive, worldOverlay::clearCaches),
 				new ToggleSpec(minimapOverlay, state -> state.minimapActive, minimapOverlay::clearCaches),
@@ -113,7 +108,6 @@ public class FogOfWarPlugin extends Plugin {
 	@Subscribe
 	@SuppressWarnings("unused")
 	public void onVarbitChanged(VarbitChanged event) {
-		if (!started) return;
 		int id = event.getVarbitId();
 		if (id == VarbitID.CUTSCENE_STATUS) {
 			if (config.disableDuringCutscenes()) updateComponents();
@@ -126,11 +120,10 @@ public class FogOfWarPlugin extends Plugin {
 		if (wildernessUpdatesActive && id == VarbitID.INSIDE_WILDERNESS) updateComponents();
 	}
 	private void updateComponents() {
-		if (!started) return;
 		updateComponents(clientState.isLoggedIn() && (config.disableWhileSailing() || config.showLandAreaWhileSailing()) && clientState.isSailing());
 	}
 	private void updateComponents(boolean sailing) {
-		if (!started) return;
+		if (overlayToggles.isEmpty()) initComponents();
 		sailingUpdatesActive = config.disableWhileSailing() || config.showLandAreaWhileSailing();
 		wildernessUpdatesActive = config.onlyInWilderness();
 		ComponentState state = createComponentState(sailing);
@@ -144,14 +137,14 @@ public class FogOfWarPlugin extends Plugin {
 		if (!state.visibleActorTrackingActive) worldOverlay.clearActorCaches();
 	}
 	private void updateComponentsOnClientThread() {
-		if (!started || !componentUpdatePending.compareAndSet(false, true)) return;
+		if (!componentUpdatePending.compareAndSet(false, true)) return;
 		clientThread.invokeLater(() -> {
 			componentUpdatePending.set(false);
 			updateComponents();
 		});
 	}
 	private ComponentState createComponentState(boolean sailing) {
-		if (!clientState.isLoggedIn() || clientState.isCutsceneSuppressed()) return ComponentState.INACTIVE;
+		if (!started || !clientState.isLoggedIn() || clientState.isCutsceneSuppressed()) return ComponentState.INACTIVE;
 		FogDisplayMode worldMode = config.worldDisplayMode();
 		FogDisplayMode minimapMode = config.minimapDisplayMode();
 		FadingPlayerMode fadingPlayerMode = config.playerFadeMarkerMode();
@@ -202,9 +195,8 @@ public class FogOfWarPlugin extends Plugin {
 			this.activeFn = activeFn;
 			this.onDisable = onDisable;
 		}
-		private void update(ComponentState state) { set(activeFn.test(state)); }
-		private void disable() { set(false); }
-		private void set(boolean enabled) {
+		private void update(ComponentState state) {
+			boolean enabled = activeFn.test(state);
 			if (this.enabled == enabled) return;
 			if (enabled) overlayManager.add(overlay);
 			else {
@@ -225,7 +217,6 @@ public class FogOfWarPlugin extends Plugin {
 			if (activeFn.test(state)) component.start();
 			else component.stop();
 		}
-		private void stop() { component.stop(); }
 	}
 	private static final class ComponentState {
 		private static final ComponentState INACTIVE = new ComponentState(false, false, false, false, false, false, false, false, false);
